@@ -250,7 +250,7 @@ EVENTS = [
 
 # Default asset paths
 DEFAULT_LOGO_PATHS = ["th_logo.png", "th_logo.jpg", "TH Logo.png", "TH Logo.jpg"]
-DEFAULT_SIG_PATHS = ["sarah_signature.png", "sarah_signature.jpg", "Sarah signature.png", "Sarah signature.jpg"]
+DEFAULT_SIG_PATHS = ["sarah_signature.jpg", "sarah_signature.png", "sarah signature.jpg", "sarah signature.png", "Sarah signature.png", "Sarah signature.jpg"]
 
 # ---------------------- Helper Functions ----------------------
 
