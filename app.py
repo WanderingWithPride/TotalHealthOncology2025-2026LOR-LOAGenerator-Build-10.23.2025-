@@ -2082,101 +2082,100 @@ with st.container():
         if st.session_state.document_type == 'LOA':
             # Get booth tier and price from booth_choice
             booth_tier = booth_choice if booth_selected else None
-        booth_price = BOOTH_PRICES.get(booth_choice, 0) if booth_selected else 0
+            booth_price = BOOTH_PRICES.get(booth_choice, 0) if booth_selected else 0
+            
+            payload.update({
+                "company_address": st.session_state.get("company_address", "[Address]"),
+                "agreement_date": st.session_state.get("agreement_date", dt.date.today().strftime("%B %d, %Y")),
+                "signature_person": st.session_state.get("signature_person", "Sarah Louden - Founder and Executive Director, Total Health Conferencing"),
+                "booth_tier": booth_tier,
+                "booth_price": currency(booth_price) if booth_selected else None,
+                "additional_info": company_required_text
+            })
         
-        payload.update({
-            "company_address": st.session_state.get("company_address", "[Address]"),
-            "agreement_date": st.session_state.get("agreement_date", dt.date.today().strftime("%B %d, %Y")),
-            "signature_person": st.session_state.get("signature_person", "Sarah Louden - Founder and Executive Director, Total Health Conferencing"),
-            "booth_tier": booth_tier,
-            "booth_price": currency(booth_price) if booth_selected else None,
-            "additional_info": company_required_text
-        })
-    
-    if st.session_state.document_type == 'LOA':
-        paragraphs = render_loa_paragraphs(payload, booth_selected, add_on_keys, add_ons_pricing)
-    else:
-        paragraphs = render_letter_paragraphs(payload, st.session_state.document_type)
-    
-    # Preview
-    preview_lines = "\n".join(paragraphs) + "\n\n"
-    if booth_selected:
-        preview_lines += "Exhibit Booth\n"
-        preview_lines += "\n".join([f"• {b}" for b in booth_bullets()]) + "\n\n"
-    if add_on_keys:
-        preview_lines += "Selected Add-Ons\n"
-        for k in add_on_keys:
-            preview_lines += f"{add_ons_pricing[k]['label']}\n"
-            preview_lines += "\n".join([f"• {b}" for b in ADD_ON_BULLETS.get(k, [])]) + "\n\n"
-    if company_required_text:
-        lead_in, bullets = parse_additional_info(company_required_text)
-        preview_lines += "Additional Information\n"
-        if lead_in:
-            preview_lines += lead_in + "\n"
-        if bullets:
-            preview_lines += "\n".join([f"• {b}" for b in bullets]) + "\n"
-        preview_lines += "\n"
-    preview_lines += "Grateful for your support,\n\n"
-    preview_lines += f"{SARAH['name']}\n{SARAH['title']}\n{SARAH['email']}\n{SARAH['phone']}"
-    
-    st.text_area("📄 Document Preview", preview_lines, height=400)
-    
-    base_filename = f"{st.session_state.document_type}_{(company_name or 'Company').replace(' ', '_')}_{event['meeting_name'].replace(' ', '_')}"
-    
-    logo_bytes = logo_bytes_default
-    sig_bytes = sig_bytes_default
-    
-    # DOCX Download
-    if st.session_state.document_type == 'LOA':
-        docx_bytes = build_loa_docx_bytes(paragraphs, logo_bytes, sig_bytes)
-        st.download_button(
-            "📄 Download LOA (.docx)", 
-            data=docx_bytes,
-            file_name=base_filename + ".docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
+        if st.session_state.document_type == 'LOA':
+            paragraphs = render_loa_paragraphs(payload, booth_selected, add_on_keys, add_ons_pricing)
+        else:
+            paragraphs = render_letter_paragraphs(payload, st.session_state.document_type)
+        
+        # Preview
+        preview_lines = "\n".join(paragraphs) + "\n\n"
+        if booth_selected:
+            preview_lines += "Exhibit Booth\n"
+            preview_lines += "\n".join([f"• {b}" for b in booth_bullets()]) + "\n\n"
+        if add_on_keys:
+            preview_lines += "Selected Add-Ons\n"
+            for k in add_on_keys:
+                preview_lines += f"{add_ons_pricing[k]['label']}\n"
+                preview_lines += "\n".join([f"• {b}" for b in ADD_ON_BULLETS.get(k, [])]) + "\n\n"
+        if company_required_text:
+            lead_in, bullets = parse_additional_info(company_required_text)
+            preview_lines += "Additional Information\n"
+            if lead_in:
+                preview_lines += lead_in + "\n"
+            if bullets:
+                preview_lines += "\n".join([f"• {b}" for b in bullets]) + "\n"
+            preview_lines += "\n"
+        preview_lines += "Grateful for your support,\n\n"
+        preview_lines += f"{SARAH['name']}\n{SARAH['title']}\n{SARAH['email']}\n{SARAH['phone']}"
+        
+        st.text_area("📄 Document Preview", preview_lines, height=400)
+        
+        base_filename = f"{st.session_state.document_type}_{(company_name or 'Company').replace(' ', '_')}_{event['meeting_name'].replace(' ', '_')}"
+        
+        logo_bytes = logo_bytes_default
+        sig_bytes = sig_bytes_default
+        
+        # DOCX Download
+        if st.session_state.document_type == 'LOA':
+            docx_bytes = build_loa_docx_bytes(paragraphs, logo_bytes, sig_bytes)
+            st.download_button(
+                "📄 Download LOA (.docx)", 
+                data=docx_bytes,
+                file_name=base_filename + ".docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
+            )
+        else:
+            docx_bytes = build_docx_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
+            st.download_button(
+                "📄 Download Letter (.docx)", 
+                data=docx_bytes,
+                file_name=base_filename + ".docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
+            )
+        
+        # PDF Download
+        if st.session_state.document_type == 'LOA':
+            pdf_bytes = build_loa_pdf_bytes(paragraphs, logo_bytes, sig_bytes)
+            st.download_button(
+                "📄 Download LOA (.pdf)", 
+                data=pdf_bytes,
+                file_name=base_filename + ".pdf",
+                mime="application/pdf" if PDF_AVAILABLE else "text/plain"
+            )
+        else:
+            pdf_bytes = build_pdf_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
+            st.download_button(
+                "📄 Download Letter (.pdf)", 
+                data=pdf_bytes,
+                file_name=base_filename + ".pdf",
+                mime="application/pdf" if PDF_AVAILABLE else "text/plain"
+            )
+        
+        # Log the letter generation
+        log_letter_generation(
+            company_name=company_name or "[Company]",
+            meeting_name=event["meeting_name"],
+            document_type=st.session_state.document_type,
+            booth_selected=booth_choice if booth_selected else None,
+            add_ons=add_on_keys,
+            total_cost=final_total,
+            additional_info=company_required_text
         )
-    else:
-        docx_bytes = build_docx_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
-        st.download_button(
-            "📄 Download Letter (.docx)", 
-            data=docx_bytes,
-            file_name=base_filename + ".docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
-        )
-    
-    # PDF Download
-    if st.session_state.document_type == 'LOA':
-        pdf_bytes = build_loa_pdf_bytes(paragraphs, logo_bytes, sig_bytes)
-        st.download_button(
-            "📄 Download LOA (.pdf)", 
-            data=pdf_bytes,
-            file_name=base_filename + ".pdf",
-            mime="application/pdf" if PDF_AVAILABLE else "text/plain"
-        )
-    else:
-        pdf_bytes = build_pdf_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
-        st.download_button(
-            "📄 Download Letter (.pdf)", 
-            data=pdf_bytes,
-            file_name=base_filename + ".pdf",
-            mime="application/pdf" if PDF_AVAILABLE else "text/plain"
-        )
-    
-    # Log the letter generation
-    log_letter_generation(
-        company_name=company_name or "[Company]",
-        meeting_name=event["meeting_name"],
-        document_type=st.session_state.document_type,
-        booth_selected=booth_choice if booth_selected else None,
-        add_ons=add_on_keys,
-        total_cost=final_total,
-        additional_info=company_required_text
-    )
-    
-    st.success(f"✅ **{st.session_state.document_type} generated successfully!** Letter logged for tracking.")
+        
+        st.success(f"✅ **{st.session_state.document_type} generated successfully!** Letter logged for tracking.")
 
-with tab2:
-    # ======================== LETTER LOG VIEWER ========================
+# ======================== EXCEL BULK GENERATION ========================
     st.markdown("### 📊 Letter Generation Log")
     st.markdown("**View and search all generated letters for lead tracking and edits**")
     
