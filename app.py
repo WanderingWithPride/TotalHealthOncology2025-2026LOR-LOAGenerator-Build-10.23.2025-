@@ -13,6 +13,38 @@ from typing import List, Dict, Optional
 
 import streamlit as st
 
+# --- Password Protection ---
+def check_password():
+    """Returns `True` if the user entered the correct password."""
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state["password"] == st.secrets["password"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store password.
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        # First run, show input for password.
+        st.text_input(
+            "Password", type="password", on_change=password_entered, key="password"
+        )
+        return False
+    elif not st.session_state["password_correct"]:
+        # Password not correct, show input + error.
+        st.text_input(
+            "Password", type="password", on_change=password_entered, key="password"
+        )
+        st.error("😕 Password incorrect")
+        return False
+    else:
+        # Password correct.
+        return True
+
+if not check_password():
+    st.stop()
+# --- End Password Protection ---
+
 # Optional dependencies
 DOCX_AVAILABLE = False
 PDF_AVAILABLE = False
@@ -47,6 +79,63 @@ except Exception:
     pass
 
 # ---------------------- Configuration & Data ----------------------
+
+# ASCO Event Naming Toggle (2026)
+USE_BEST_OF_ASCO_NAMING = False  # Set to True when approved to use "Best of ASCO"
+
+# Letter Generation Logging
+LETTER_LOG_FILE = "letter_generation_log.json"
+
+def log_letter_generation(company_name, meeting_name, document_type, booth_selected, add_ons, total_cost, additional_info=""):
+    """Log letter generation details to JSON file"""
+    import json
+    from datetime import datetime
+    
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "company_name": company_name,
+        "meeting_name": meeting_name,
+        "document_type": document_type,
+        "booth_selected": booth_selected,
+        "add_ons": add_ons,
+        "total_cost": total_cost,
+        "additional_info": additional_info
+    }
+    
+    try:
+        # Load existing log
+        try:
+            with open(LETTER_LOG_FILE, 'r') as f:
+                log_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            log_data = {"letters": []}
+        
+        # Add new entry
+        log_data["letters"].append(log_entry)
+        
+        # Save updated log
+        with open(LETTER_LOG_FILE, 'w') as f:
+            json.dump(log_data, f, indent=2)
+            
+    except Exception as e:
+        st.error(f"Failed to log letter generation: {e}")
+
+def get_letter_log():
+    """Get all logged letters"""
+    import json
+    try:
+        with open(LETTER_LOG_FILE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"letters": []}
+
+def get_asco_event_name(base_name: str) -> str:
+    """Get ASCO event name based on naming toggle"""
+    # Use session state if available, otherwise use global variable
+    use_best_of = st.session_state.get('use_best_of_asco', USE_BEST_OF_ASCO_NAMING)
+    if use_best_of:
+        return base_name.replace("ASCO Direct", "Best of ASCO")
+    return base_name
 
 # Booth pricing
 BOOTH_PRICES = {
@@ -168,46 +257,46 @@ EVENTS = [
     {"meeting_name": "2026 Northwell Cancer Institute Frontiers in Cancer Scientific Symposium", "meeting_date_long": "January 28, 2026", "venue": "Carnegie Hall", "city_state": "Manhattan, NYC", "default_tier": "standard_1d"},
     {"meeting_name": "2026 West Oncology Conference", "meeting_date_long": "January 31-February 1, 2026", "venue": "Hilton Memphis", "city_state": "Memphis, TN", "default_tier": "standard_2d", "expected_attendance": 50},
     {"meeting_name": "2026 Best of Hematology Conference", "meeting_date_long": "February 7-8, 2026", "venue": "The Hythe", "city_state": "Vail, CO", "default_tier": "best_of", "expected_attendance": 30},
-    {"meeting_name": "2026 ASCO Direct GI", "meeting_date_long": "February 7-8, 2026", "venue": "The Rittenhouse", "city_state": "Philadelphia, PA", "default_tier": "standard_2d", "expected_attendance": 40},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct GI"), "meeting_date_long": "February 7-8, 2026", "venue": "The Rittenhouse", "city_state": "Philadelphia, PA", "default_tier": "standard_2d", "expected_attendance": 40},
     {"meeting_name": "2026 University of Kansas Cancer Center Breast Cancer Year in Review", "meeting_date_long": "February 21, 2026", "venue": "Sheraton Overland Park Hotel at the Convention Center", "city_state": "Kansas City, MO", "default_tier": "standard_1d", "expected_attendance": 75},
     {"meeting_name": "2026 Cancer Updates GI and Breast, Dallas, TX", "meeting_date_long": "February 26, 2026", "venue": "The Highland Dallas", "city_state": "Dallas, TX", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 Cancer Updates GI and Breast, Nashville, TN", "meeting_date_long": "March 5, 2026", "venue": "Loews Vanderbilt Hotel", "city_state": "Nashville, TN", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 Cancer Updates GI and Lung, Denver, CO", "meeting_date_long": "March 12, 2026", "venue": "Denver Marriott Westminster", "city_state": "Denver, CO", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 ASCO Direct GU", "meeting_date_long": "March 14-15, 2026", "venue": "The Hyatt", "city_state": "Boston, MA", "default_tier": "standard_2d", "expected_attendance": 40},
     {"meeting_name": "2026 Cancer Updates GI and Breast, Houston", "meeting_date_long": "April 9, 2026", "venue": "The Blossom Hotel Houston", "city_state": "Houston, TX", "default_tier": "standard_1d", "expected_attendance": 30},
-    {"meeting_name": "2026 Pathways Conference", "meeting_date_long": "April 10-11, 2026", "venue": "Houston, TX", "city_state": "Houston, TX", "default_tier": "standard_2d"},
-    {"meeting_name": "2026 Oncology Clinical Updates - Review and Renew Sedona", "meeting_date_long": "April 11-12, 2026", "venue": "Sedona, AZ", "city_state": "Sedona, AZ", "default_tier": "standard_2d"},
-    {"meeting_name": "ESMO in Focus 2026: Lung Cancer and Sarcomas - With John Trent and Ravi Salgia", "meeting_date_long": "April 25, 2026", "venue": "Minneapolis, MN", "city_state": "Minneapolis, MN", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates Breast and Lung, Kansas City", "meeting_date_long": "May 14, 2026", "venue": "Kansas City, MO", "city_state": "Kansas City, MO", "default_tier": "standard_1d"},
+    {"meeting_name": "2026 Pathways Conference", "meeting_date_long": "September 25-26, 2026", "venue": "Hotel Zaza Houston", "city_state": "Houston, TX", "default_tier": "standard_2d"},
+    {"meeting_name": "2026 Oncology Clinical Updates - Review and Renew Sedona", "meeting_date_long": "April 11-12, 2026", "venue": "Hilton Sedona Resort at Bell Rock", "city_state": "Sedona, AZ", "default_tier": "standard_2d", "expected_attendance": 30},
+    {"meeting_name": "ESMO USA in Focus 2026: Lung Cancer and Sarcomas - With John Trent and Ravi Salgia", "meeting_date_long": "April 25, 2026", "venue": "Minneapolis Marriott City Center", "city_state": "Minneapolis, MN", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 Cancer Updates Breast and Lung, Kansas City", "meeting_date_long": "May 14, 2026", "venue": "Crossroads Hotel Kansas City", "city_state": "Kansas City, MO", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "ESMO in Focus 2026: Breast - EAST - With Reshma Mahtani and Kevin Kalinsky", "meeting_date_long": "May 16, 2026", "venue": "Baltimore, MD", "city_state": "Baltimore, MD", "default_tier": "standard_1d"},
     {"meeting_name": "ESMO in Focus 2026: Breast - WEST - With Hope Rugo and Sarah Tolaney", "meeting_date_long": "May 16, 2026", "venue": "Salt Lake City, UT", "city_state": "Salt Lake City, UT", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Best Of ASCO Puerto Rico", "meeting_date_long": "June 13-14, 2026", "venue": "Hyatt Regency Grand Reserve", "city_state": "San Juan, PR", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Austin", "meeting_date_long": "June 13-14, 2026", "venue": "W Austin", "city_state": "Austin, TX", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Los Angeles", "meeting_date_long": "June 13-14, 2026", "venue": "Le Meridien", "city_state": "Los Angeles, CA", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Hawaii", "meeting_date_long": "June 27-28, 2026", "venue": "Sheraton Waikiki Beach Resort", "city_state": "Honolulu, HI", "default_tier": "standard_2d", "expected_attendance": 100},
-    {"meeting_name": "2026 Best Of ASCO Washington DC", "meeting_date_long": "June 27-28, 2026", "venue": "Four Seasons Hotel Washington", "city_state": "Washington DC", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Denver", "meeting_date_long": "June 27-28, 2026", "venue": "Denver Marriott Westminster", "city_state": "Denver, CO", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Cancer Updates Heme and Breast, Michigan", "meeting_date_long": "July 9, 2026", "venue": "Ann Arbor, MI", "city_state": "Ann Arbor, MI", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 ASCO Direct New Orleans", "meeting_date_long": "July 10-11, 2026", "venue": "New Orleans, LA", "city_state": "New Orleans, LA", "default_tier": "standard_2d"},
-    {"meeting_name": "2026 ASCO Direct Charlotte", "meeting_date_long": "July 18-19, 2026", "venue": "Grand Bohemian", "city_state": "Charlotte, NC", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Philadelphia", "meeting_date_long": "July 18-19, 2026", "venue": "Rittenhouse", "city_state": "Philadelphia, PA", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Anchorage", "meeting_date_long": "July 18-19, 2026", "venue": "Anchorage Marriott Downtown", "city_state": "Anchorage, AK", "default_tier": "standard_2d", "expected_attendance": 30},
-    {"meeting_name": "2026 ASCO Direct Las Vegas", "meeting_date_long": "July 25-26, 2026", "venue": "Westin Lake Las Vegas", "city_state": "Henderson/Las Vegas, NV", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Indianapolis", "meeting_date_long": "July 25-26, 2026", "venue": "Indianapolis Marriott Downtown", "city_state": "Indianapolis, IN", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Minneapolis", "meeting_date_long": "August 1-2, 2026", "venue": "Four Seasons Minneapolis", "city_state": "Minneapolis, MN", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Maine", "meeting_date_long": "August 1-2, 2026", "venue": "TBD", "city_state": "Portland, ME", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 ASCO Direct Boston", "meeting_date_long": "August 8-9, 2026", "venue": "Ritz Carlton Boston", "city_state": "Boston, MA", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 ASCO Direct Seattle", "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Motif Seattle", "city_state": "Seattle, WA", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Memphis", "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Memphis", "city_state": "Memphis, TN", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Cancer Update GU and Lung, Princeton, NJ", "meeting_date_long": "August 13, 2026", "venue": "Princeton, NJ", "city_state": "Princeton, NJ", "default_tier": "standard_1d"},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Puerto Rico"), "meeting_date_long": "June 13-14, 2026", "venue": "Hyatt Regency Grand Reserve", "city_state": "San Juan, PR", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Austin"), "meeting_date_long": "June 13-14, 2026", "venue": "W Austin", "city_state": "Austin, TX", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Los Angeles"), "meeting_date_long": "June 13-14, 2026", "venue": "Le Meridien", "city_state": "Los Angeles, CA", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Hawaii"), "meeting_date_long": "June 27-28, 2026", "venue": "Sheraton Waikiki Beach Resort", "city_state": "Honolulu, HI", "default_tier": "standard_2d", "expected_attendance": 100},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Washington DC"), "meeting_date_long": "June 27-28, 2026", "venue": "Four Seasons Hotel Washington", "city_state": "Washington DC", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Denver"), "meeting_date_long": "June 27-28, 2026", "venue": "Denver Marriott Westminster", "city_state": "Denver, CO", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": "2026 Cancer Updates Heme and Breast, Michigan", "meeting_date_long": "July 9, 2026", "venue": "The Vanguard Ann Arbor, Autograph Collection", "city_state": "Ann Arbor, MI", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct New Orleans"), "meeting_date_long": "July 10-11, 2026", "venue": "Hyatt Regency NOLA", "city_state": "New Orleans, LA", "default_tier": "standard_2d", "expected_attendance": 30},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Charlotte"), "meeting_date_long": "July 18-19, 2026", "venue": "Grand Bohemian", "city_state": "Charlotte, NC", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Philadelphia"), "meeting_date_long": "July 18-19, 2026", "venue": "Rittenhouse", "city_state": "Philadelphia, PA", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Anchorage"), "meeting_date_long": "July 18-19, 2026", "venue": "Anchorage Marriott Downtown", "city_state": "Anchorage, AK", "default_tier": "standard_2d", "expected_attendance": 30},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Las Vegas"), "meeting_date_long": "July 25-26, 2026", "venue": "Westin Lake Las Vegas", "city_state": "Henderson/Las Vegas, NV", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Indianapolis"), "meeting_date_long": "July 25-26, 2026", "venue": "Indianapolis Marriott Downtown", "city_state": "Indianapolis, IN", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Minneapolis"), "meeting_date_long": "August 1-2, 2026", "venue": "Four Seasons Minneapolis", "city_state": "Minneapolis, MN", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Maine"), "meeting_date_long": "August 1-2, 2026", "venue": "TBD", "city_state": "Portland, ME", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Boston"), "meeting_date_long": "August 8-9, 2026", "venue": "Ritz Carlton Boston", "city_state": "Boston, MA", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Seattle"), "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Motif Seattle", "city_state": "Seattle, WA", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Memphis"), "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Memphis", "city_state": "Memphis, TN", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": "2026 Cancer Update GU and Lung, Princeton, NJ", "meeting_date_long": "August 13, 2026", "venue": "Princeton Marriott at Forrestal", "city_state": "Princeton, NJ", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 Oncology Clinical Updates - Review and Renew Martha's Vineyard", "meeting_date_long": "August 15-16, 2026", "venue": "Martha's Vineyard, MA", "city_state": "Martha's Vineyard, MA", "default_tier": "standard_2d"},
-    {"meeting_name": "2026 Cancer Updates GU and Heme, Houston, TX", "meeting_date_long": "September 10, 2026", "venue": "Houston, TX", "city_state": "Houston, TX", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 MDONS Conference", "meeting_date_long": "September 18, 2026", "venue": "Denver, CO", "city_state": "Denver, CO", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates Lung and Breast, Dallas, TX", "meeting_date_long": "September 24, 2026", "venue": "Dallas, TX", "city_state": "Dallas, TX", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates GU and Lung, Philadelphia, PA", "meeting_date_long": "September 24, 2026", "venue": "Philadelphia, PA", "city_state": "Philadelphia, PA", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Astera Cancer Care Annual Retreat", "meeting_date_long": "September 26, 2026", "venue": "Long Branch, NJ", "city_state": "Long Branch, NJ", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates GI and Breast, Boston, MA", "meeting_date_long": "October 1, 2026", "venue": "Boston, MA", "city_state": "Boston, MA", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 West Oncology APP Dinner", "meeting_date_long": "October 8, 2026", "venue": "Memphis, TN", "city_state": "Memphis, TN", "default_tier": "standard_1d"},
+    {"meeting_name": "2026 Cancer Updates GU and Heme, Houston, TX", "meeting_date_long": "September 10, 2026", "venue": "The Blossom Hotel Houston", "city_state": "Houston, TX", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 MDONS Conference", "meeting_date_long": "September 18, 2026", "venue": "The Westin Westminster", "city_state": "Denver, CO", "default_tier": "standard_1d", "expected_attendance": 200},
+    {"meeting_name": "2026 Cancer Updates Lung and Breast, Dallas, TX", "meeting_date_long": "September 24, 2026", "venue": "The Beeman Hotel", "city_state": "Dallas, TX", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 Cancer Updates GU and Lung, Philadelphia, PA", "meeting_date_long": "September 24, 2026", "venue": "Hilton Penn's Landing", "city_state": "Philadelphia, PA", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 Astera Cancer Care Annual Retreat", "meeting_date_long": "September 26, 2026", "venue": "Ocean Place Resort and Spa", "city_state": "Long Branch, NJ", "default_tier": "standard_1d"},
+    {"meeting_name": "2026 Cancer Updates GI and Breast, Boston, MA", "meeting_date_long": "October 1, 2026", "venue": "Battery Wharf Hotel Boston Waterfront", "city_state": "Boston, MA", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 West Oncology APP Dinner", "meeting_date_long": "October 8, 2026", "venue": "Hilton Memphis", "city_state": "Memphis, TN", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 Virtual West Oncology APP", "meeting_date_long": "October 9, 2026", "venue": "Virtual", "city_state": "Virtual", "default_tier": "standard_1d"},
     {"meeting_name": "2026 Empower (Patient Meeting)", "meeting_date_long": "October 10, 2026", "venue": "Boca Raton, FL", "city_state": "Boca Raton, FL", "default_tier": "standard_1d"},
     {"meeting_name": "2026 Empower GI Conference", "meeting_date_long": "November 7, 2026", "venue": "Washington DC", "city_state": "Washington DC", "default_tier": "standard_1d"},
@@ -218,7 +307,7 @@ EVENTS = [
 
 # Default asset paths
 DEFAULT_LOGO_PATHS = ["th_logo.png", "th_logo.jpg", "TH Logo.png", "TH Logo.jpg"]
-DEFAULT_SIG_PATHS = ["sarah_signature.png", "sarah_signature.jpg", "Sarah signature.png", "Sarah signature.jpg"]
+DEFAULT_SIG_PATHS = ["sarah_signature.jpg", "sarah_signature.png", "sarah signature.jpg", "sarah signature.png", "Sarah signature.png", "Sarah signature.jpg"]
 
 # ---------------------- Helper Functions ----------------------
 
@@ -247,6 +336,31 @@ def read_first_existing(paths) -> Optional[bytes]:
         fp = Path(p)
         if fp.exists() and fp.is_file():
             return fp.read_bytes()
+    return None
+
+# Embedded images for Streamlit Cloud deployment
+def get_embedded_logo() -> Optional[bytes]:
+    """Get embedded logo for cloud deployment"""
+    try:
+        # Try to read from file first
+        logo_bytes = read_first_existing(DEFAULT_LOGO_PATHS)
+        if logo_bytes:
+            return logo_bytes
+    except:
+        pass
+    # Fallback: return None (no logo)
+    return None
+
+def get_embedded_signature() -> Optional[bytes]:
+    """Get embedded signature for cloud deployment"""
+    try:
+        # Try to read from file first
+        sig_bytes = read_first_existing(DEFAULT_SIG_PATHS)
+        if sig_bytes:
+            return sig_bytes
+    except:
+        pass
+    # Fallback: return None (no signature)
     return None
 
 def render_letter_paragraphs(payload: Dict, document_type: str = 'LOR') -> List[str]:
@@ -1138,6 +1252,43 @@ st.markdown(f"""
         border: 1px solid #e0e0e0 !important;
     }}
     
+    /* Fix tab navigation styling - NUCLEAR APPROACH */
+    .stTabs [data-baseweb="tab-list"] button {{
+        background: white !important;
+        color: #013955 !important;
+        border: 1px solid #013955 !important;
+        font-weight: 600 !important;
+    }}
+    
+    .stTabs [data-baseweb="tab-list"] button:hover {{
+        background: #013955 !important;
+        color: white !important;
+    }}
+    
+    /* CRITICAL: Selected tab must have white text */
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {{
+        background: #013955 !important;
+        color: white !important;
+        border-color: #013955 !important;
+    }}
+    
+    /* Force unselected tabs to have dark text */
+    .stTabs button:not([aria-selected="true"]) {{
+        color: #013955 !important;
+        background: white !important;
+    }}
+    
+    /* Override any other styling for selected tab */
+    .stTabs button[aria-selected="true"] * {{
+        color: white !important;
+    }}
+    
+    /* Force selected tab text to be white */
+    .stTabs [aria-selected="true"] {{
+        color: white !important;
+        background: #013955 !important;
+    }}
+    
     /* Fix button styling - remove white backgrounds from buttons */
     .stButton > button {{
         background: {TH_COLORS['primary']} !important;
@@ -1429,8 +1580,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Load assets
-logo_bytes_default = read_first_existing(DEFAULT_LOGO_PATHS)
-sig_bytes_default = read_first_existing(DEFAULT_SIG_PATHS)
+logo_bytes_default = get_embedded_logo()
+sig_bytes_default = get_embedded_signature()
 
 # Header
 current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
@@ -1455,12 +1606,16 @@ if 'novartis_clicked' not in st.session_state:
 if 'additional_info_text' not in st.session_state:
     st.session_state.additional_info_text = ""
 
-# Main form
-with st.container():
-    st.markdown('<div class="stContainer">', unsafe_allow_html=True)
-    
-    # Document type selection
-    st.markdown('<div class="section-header">Document Type</div>', unsafe_allow_html=True)
+# Main Navigation Tabs
+tab1, tab2, tab3 = st.tabs(["📄 Generate Letters", "📊 Letter Log", "📋 Excel Bulk"])
+
+with tab1:
+    # Main form
+    with st.container():
+        st.markdown('<div class="stContainer">', unsafe_allow_html=True)
+        
+        # Document type selection
+        st.markdown('<div class="section-header">Document Type</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -1477,6 +1632,29 @@ with st.container():
         st.success("✅ Selected: Letter of Request (LOR)")
     else:
         st.success("✅ Selected: Letter of Agreement (LOA)")
+    
+    # ASCO Event Naming Toggle (2026)
+    st.markdown('<div class="section-header">ASCO Event Naming (2026)</div>', unsafe_allow_html=True)
+    st.markdown("**Toggle between 'ASCO Direct' and 'Best of ASCO' naming for 2026 events:**")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🏷️ Use 'ASCO Direct' (Current)", use_container_width=True):
+            st.session_state.use_best_of_asco = False
+            st.rerun()
+    with col2:
+        if st.button("⭐ Use 'Best of ASCO' (When Approved)", use_container_width=True):
+            st.session_state.use_best_of_asco = True
+            st.rerun()
+    
+    # Show current naming convention
+    if 'use_best_of_asco' not in st.session_state:
+        st.session_state.use_best_of_asco = False
+    
+    if st.session_state.use_best_of_asco:
+        st.info("📝 **Current Naming:** 'Best of ASCO' events (Ready for approval)")
+    else:
+        st.info("📝 **Current Naming:** 'ASCO Direct' events (Current default)")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1870,44 +2048,44 @@ with st.container():
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Progress indicator
-st.markdown("---")
-st.markdown("### 📋 Document Generation Progress")
+    # Progress indicator
+    st.markdown("---")
+    st.markdown("### 📋 Document Generation Progress")
 
-# Check if all required fields are filled
-required_fields = {
-    "Event": event_choice if event_choice else None,
-    "Company": company_name,
-    "Document Type": st.session_state.document_type
-}
-
-missing_fields = [field for field, value in required_fields.items() if not value or value.strip() == ""]
-
-if missing_fields:
-    st.warning(f"⚠️ **Please complete:** {', '.join(missing_fields)}")
-    st.info("💡 **Tip:** All required fields must be completed before generating the document.")
-else:
-    st.success("✅ **All required fields completed** - Ready to generate document!")
-
-st.markdown("---")
-
-# Generate button and downloads
-button_text = "🚀 Generate LOA" if st.session_state.document_type == 'LOA' else "🚀 Generate Letter"
-if st.button(button_text, use_container_width=True):
-    payload = {
-        "company_name": (company_name or "[Company]").strip(),
-        "meeting_name": event["meeting_name"],
-        "meeting_date_long": event["meeting_date_long"],
-        "venue": event["venue"],
-        "city_state": event["city_state"],
-        "attendance_expected": attendance or None,
-        "amount_currency": currency(final_total),
+    # Check if all required fields are filled
+    required_fields = {
+        "Event": event_choice if event_choice else None,
+        "Company": company_name,
+        "Document Type": st.session_state.document_type
     }
+
+    missing_fields = [field for field, value in required_fields.items() if not value or value.strip() == ""]
+
+    if missing_fields:
+        st.warning(f"⚠️ **Please complete:** {', '.join(missing_fields)}")
+        st.info("💡 **Tip:** All required fields must be completed before generating the document.")
+    else:
+        st.success("✅ **All required fields completed** - Ready to generate document!")
+
+    st.markdown("---")
+
+    # Generate button and downloads
+    button_text = "🚀 Generate LOA" if st.session_state.document_type == 'LOA' else "🚀 Generate Letter"
+    if st.button(button_text, use_container_width=True):
+        payload = {
+            "company_name": (company_name or "[Company]").strip(),
+            "meeting_name": event["meeting_name"],
+            "meeting_date_long": event["meeting_date_long"],
+            "venue": event["venue"],
+            "city_state": event["city_state"],
+            "attendance_expected": attendance or None,
+            "amount_currency": currency(final_total),
+        }
     
-    # Add LOA-specific fields if LOA is selected
-    if st.session_state.document_type == 'LOA':
-        # Get booth tier and price from booth_choice
-        booth_tier = booth_choice if booth_selected else None
+        # Add LOA-specific fields if LOA is selected
+        if st.session_state.document_type == 'LOA':
+            # Get booth tier and price from booth_choice
+            booth_tier = booth_choice if booth_selected else None
         booth_price = BOOTH_PRICES.get(booth_choice, 0) if booth_selected else 0
         
         payload.update({
@@ -1987,52 +2165,144 @@ if st.button(button_text, use_container_width=True):
             file_name=base_filename + ".pdf",
             mime="application/pdf" if PDF_AVAILABLE else "text/plain"
         )
-
-
-# ======================== EXCEL BULK GENERATION ========================
-st.markdown("---")
-st.markdown("---")
-
-# Excel Bulk Generation Tab
-st.markdown("### 📊 Excel Bulk Letter Generator")
-st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
-
-
-# Excel bulk section - clean approach without CSS overrides
-
-# Instructions
-with st.expander("📋 How To Use Excel Bulk Mode", expanded=False):
-    st.markdown("""
-    ### Step-by-Step Guide:
     
-    1. **Prepare your Excel file** with these columns:
-       - `Exhibitor Invite` (required) - Used for filename
-       - `Event Name` (required) - Will be matched to system events  
-       - `Total` (required) - Final price shown in letter
-       - `Company Name` (optional) - Company name in letter (defaults to "[Company Name]")
-       - `Expected Attendance` (optional) - Override system attendance
-       - `Date`, `City`, `Venue`, `Official Address` (optional) - Override system defaults
-       - `Amount`, `Discount` (optional) - For reference
+    # Log the letter generation
+    log_letter_generation(
+        company_name=company_name or "[Company]",
+        meeting_name=event["meeting_name"],
+        document_type=st.session_state.document_type,
+        booth_selected=booth_choice if booth_selected else None,
+        add_ons=add_on_keys,
+        total_cost=final_total,
+        additional_info=company_required_text
+    )
     
-    2. **Upload the Excel file** below
-    
-    3. **Review the preview** to make sure data loaded correctly
-    
-    4. **Click Generate** button
-    
-    5. **Download ZIP** with all your letters!
-    
-    ### Example Excel Format:
-    ```
-    Exhibitor Invite | Event Name | Date | City | Venue | Official Address | Amount | Discount | Total
-    2026 ASCO Denver Invite | 2026 ASCO Direct Denver | June 27-28 | Denver, CO | Denver Marriott Westminster | 7000 Church Ranch Blvd... | $7,500 | 10% | $6,750
-    ```
-    """)
+    st.success(f"✅ **{st.session_state.document_type} generated successfully!** Letter logged for tracking.")
 
-# Company name input (applies to all letters)
-st.markdown("#### 🏢 Company Information")
-bulk_company_name = st.text_input(
-    "Company Name (applies to all letters in Excel)",
+with tab2:
+    # ======================== LETTER LOG VIEWER ========================
+    st.markdown("### 📊 Letter Generation Log")
+    st.markdown("**View and search all generated letters for lead tracking and edits**")
+    
+    # Get letter log
+    letter_log = get_letter_log()
+    letters = letter_log.get("letters", [])
+    
+    if letters:
+        # Search and filter options
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            search_company = st.text_input("🔍 Search by Company", placeholder="Enter company name...", key="search_company")
+        with col2:
+            search_meeting = st.text_input("🔍 Search by Meeting", placeholder="Enter meeting name...", key="search_meeting")
+        with col3:
+            doc_type_filter = st.selectbox("📄 Filter by Document Type", ["All", "LOR", "LOA"], key="doc_filter")
+        
+        # Filter letters
+        filtered_letters = letters
+        if search_company:
+            filtered_letters = [l for l in filtered_letters if search_company.lower() in l.get("company_name", "").lower()]
+        if search_meeting:
+            filtered_letters = [l for l in filtered_letters if search_meeting.lower() in l.get("meeting_name", "").lower()]
+        if doc_type_filter != "All":
+            filtered_letters = [l for l in filtered_letters if l.get("document_type") == doc_type_filter]
+        
+        # Display results
+        st.markdown(f"**Found {len(filtered_letters)} letters** (Total: {len(letters)})")
+        
+        # Show letters in reverse chronological order (newest first)
+        for i, letter in enumerate(reversed(filtered_letters[-50:])):  # Show last 50
+            with st.expander(f"📄 {letter.get('company_name', 'Unknown')} - {letter.get('meeting_name', 'Unknown')} ({letter.get('document_type', 'Unknown')})", expanded=False):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write(f"**Company:** {letter.get('company_name', 'N/A')}")
+                    st.write(f"**Meeting:** {letter.get('meeting_name', 'N/A')}")
+                    st.write(f"**Document Type:** {letter.get('document_type', 'N/A')}")
+                    st.write(f"**Booth Selected:** {letter.get('booth_selected', 'N/A')}")
+                    st.write(f"**Add-ons:** {', '.join(letter.get('add_ons', [])) if letter.get('add_ons') else 'None'}")
+                
+                with col2:
+                    st.write(f"**Total Cost:** ${letter.get('total_cost', 0):,.2f}")
+                    st.write(f"**Generated:** {letter.get('timestamp', 'N/A')[:19]}")
+                    if letter.get('additional_info'):
+                        st.write(f"**Additional Info:** {letter.get('additional_info', 'N/A')[:100]}...")
+                
+                # Quick actions
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button(f"📋 Copy Details", key=f"copy_{i}"):
+                        st.write("Details copied to clipboard!")
+                with col2:
+                    if st.button(f"📧 Email Info", key=f"email_{i}"):
+                        st.write("Email template ready!")
+                with col3:
+                    if st.button(f"🔄 Regenerate", key=f"regen_{i}"):
+                        st.write("Ready to regenerate with same settings!")
+    else:
+        st.info("📝 **No letters generated yet.** Generate your first letter to start tracking!")
+    
+    # Summary statistics
+    if letters:
+        st.markdown("---")
+        st.markdown("### 📈 Summary Statistics")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Letters", len(letters))
+        with col2:
+            lor_count = len([l for l in letters if l.get('document_type') == 'LOR'])
+            st.metric("LORs", lor_count)
+        with col3:
+            loa_count = len([l for l in letters if l.get('document_type') == 'LOA'])
+            st.metric("LOAs", loa_count)
+        with col4:
+            total_revenue = sum([l.get('total_cost', 0) for l in letters])
+            st.metric("Total Revenue", f"${total_revenue:,.2f}")
+
+with tab3:
+    # ======================== EXCEL BULK GENERATION ========================
+    st.markdown("### 📊 Excel Bulk Letter Generator")
+    st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
+
+
+    # Excel bulk section - clean approach without CSS overrides
+
+    # Instructions
+    with st.expander("📋 How To Use Excel Bulk Mode", expanded=False):
+        st.markdown("""
+        ### Step-by-Step Guide:
+        
+        1. **Prepare your Excel file** with these columns:
+           - `Exhibitor Invite` (required) - Used for filename
+           - `Event Name` (required) - Will be matched to system events  
+           - `Total` (required) - Final price shown in letter
+           - `Company Name` (optional) - Company name in letter (defaults to "[Company Name]")
+           - `Expected Attendance` (optional) - Override system attendance
+           - `Date`, `City`, `Venue`, `Official Address` (optional) - Override system defaults
+           - `Amount`, `Discount` (optional) - For reference
+        
+        2. **Upload the Excel file** below
+        
+        3. **Review the preview** to make sure data loaded correctly
+        
+        4. **Click Generate** button
+    
+        5. **Download ZIP** with all your letters!
+        
+        ### Example Excel Format:
+        ```
+        Exhibitor Invite | Event Name | Date | City | Venue | Official Address | Amount | Discount | Total
+        2026 ASCO Denver Invite | 2026 ASCO Direct Denver | June 27-28 | Denver, CO | Denver Marriott Westminster | 7000 Church Ranch Blvd... | $7,500 | 10% | $6,750
+        ```
+        """)
+
+    # Company name input (applies to all letters)
+    st.markdown("#### 🏢 Company Information")
+    bulk_company_name = st.text_input(
+        "Company Name (applies to all letters in Excel)",
     placeholder="e.g., Novartis Pharmaceuticals Corporation",
     help="This company name will be used in all generated letters",
     key="bulk_company_name"
@@ -2205,8 +2475,8 @@ if uploaded_file:
                                 paragraphs = render_letter_paragraphs(payload, bulk_doc_type)
                                 
                                 # Load assets
-                                logo_bytes = read_first_existing(DEFAULT_LOGO_PATHS)
-                                sig_bytes = read_first_existing(DEFAULT_SIG_PATHS)
+                                logo_bytes = get_embedded_logo()
+                                sig_bytes = get_embedded_signature()
                                 
                                 # Generate documents
                                 docx_bytes = build_docx_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
@@ -2249,6 +2519,28 @@ if uploaded_file:
                     # Results
                     if generated_count > 0:
                         st.success(f"🎉 **Successfully Generated:** {generated_count} documents ({generated_count * 2} files total)")
+                        
+                        # Log bulk generation
+                        for idx, row in df.iterrows():
+                            if idx < generated_count:  # Only log successful generations
+                                try:
+                                    company_name = bulk_company_name.strip() if bulk_company_name and bulk_company_name.strip() else str(row.get('Company Name', '[Company Name]'))
+                                    event_name = str(row.get('Event Name', ''))
+                                    total = float(re.sub(r'[$,]', '', str(row.get('Total', '$0'))))
+                                    
+                                    log_letter_generation(
+                                        company_name=company_name,
+                                        meeting_name=event_name,
+                                        document_type=bulk_doc_type,
+                                        booth_selected=None,  # Bulk doesn't track booth details
+                                        add_ons=[],
+                                        total_cost=total,
+                                        additional_info=f"Bulk generated from Excel - Row {idx+2}"
+                                    )
+                                except Exception as log_error:
+                                    st.write(f"Note: Could not log row {idx+2}: {log_error}")
+                        
+                        st.info(f"📊 **Bulk generation logged:** {generated_count} letters added to tracking log")
                     
                     if error_count > 0:
                         st.warning(f"⚠️ **Errors:** {error_count} rows skipped due to issues")
@@ -2293,26 +2585,5 @@ else:
     except:
         st.write("Example columns: Exhibitor Invite, Event Name, Date, City, Total")
     
-    st.info("💡 **Tip:** Create your Excel file with the same column structure as shown above")
-
-st.markdown("---")
-
-# ======================== ADDITIONAL RESOURCES ========================
-st.markdown("---")
-st.markdown("---")
-
-with st.expander("📚 Additional Resources & Help", expanded=False):
-    st.markdown("### 📚 Help & Documentation")
-    st.info("""
-    **All Features Integrated in This Application:**
-    
-    ✅ **Single Event Mode** - Generate individual LOR/LOA documents
-    ✅ **Multi-Meeting Mode** - Generate quarterly package documents  
-    ✅ **Excel Bulk Mode** - Upload Excel spreadsheet for bulk document generation
-    
-    **Need Help?**
-    - All functionality is available in this single application
-    - Use the Excel Bulk Letter Generator section above for bulk processing
-    - Contact your system administrator for technical support
-    """)
+        st.info("💡 **Tip:** Create your Excel file with the same column structure as shown above")
 
