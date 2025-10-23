@@ -1606,16 +1606,12 @@ if 'novartis_clicked' not in st.session_state:
 if 'additional_info_text' not in st.session_state:
     st.session_state.additional_info_text = ""
 
-# Main Navigation Tabs
-tab1, tab2, tab3 = st.tabs(["📄 Generate Letters", "📊 Letter Log", "📋 Excel Bulk"])
-
-with tab1:
-    # Main form
-    with st.container():
-        st.markdown('<div class="stContainer">', unsafe_allow_html=True)
-        
-        # Document type selection
-        st.markdown('<div class="section-header">Document Type</div>', unsafe_allow_html=True)
+# Main form
+with st.container():
+    st.markdown('<div class="stContainer">', unsafe_allow_html=True)
+    
+    # Document type selection
+    st.markdown('<div class="section-header">Document Type</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
