@@ -1252,6 +1252,30 @@ st.markdown(f"""
         border: 1px solid #e0e0e0 !important;
     }}
     
+    /* Fix tab navigation styling */
+    .stTabs [data-baseweb="tab-list"] {{
+        background: white !important;
+        border-bottom: 2px solid {TH_COLORS['primary']} !important;
+    }}
+    
+    .stTabs [data-baseweb="tab"] {{
+        background: white !important;
+        color: {TH_COLORS['primary']} !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+        border-bottom: none !important;
+    }}
+    
+    .stTabs [data-baseweb="tab"]:hover {{
+        background: {TH_COLORS['primary']}15 !important;
+        color: {TH_COLORS['primary']} !important;
+    }}
+    
+    .stTabs [aria-selected="true"] {{
+        background: {TH_COLORS['primary']} !important;
+        color: white !important;
+        border-color: {TH_COLORS['primary']} !important;
+    }}
+    
     /* Fix button styling - remove white backgrounds from buttons */
     .stButton > button {{
         background: {TH_COLORS['primary']} !important;
