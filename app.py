@@ -1569,12 +1569,16 @@ if 'novartis_clicked' not in st.session_state:
 if 'additional_info_text' not in st.session_state:
     st.session_state.additional_info_text = ""
 
-# Main form
-with st.container():
-    st.markdown('<div class="stContainer">', unsafe_allow_html=True)
-    
-    # Document type selection
-    st.markdown('<div class="section-header">Document Type</div>', unsafe_allow_html=True)
+# Main Navigation Tabs
+tab1, tab2, tab3 = st.tabs(["📄 Generate Letters", "📊 Letter Log", "📋 Excel Bulk"])
+
+with tab1:
+    # Main form
+    with st.container():
+        st.markdown('<div class="stContainer">', unsafe_allow_html=True)
+        
+        # Document type selection
+        st.markdown('<div class="section-header">Document Type</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -2138,117 +2142,130 @@ if st.button(button_text, use_container_width=True):
     
     st.success(f"✅ **{st.session_state.document_type} generated successfully!** Letter logged for tracking.")
 
-
-# ======================== LETTER LOG VIEWER ========================
-st.markdown("---")
-st.markdown("### 📊 Letter Generation Log")
-st.markdown("**View and search all generated letters for lead tracking and edits**")
-
-# Get letter log
-letter_log = get_letter_log()
-letters = letter_log.get("letters", [])
-
-if letters:
-    # Search and filter options
-    col1, col2, col3 = st.columns(3)
+with tab2:
+    # ======================== LETTER LOG VIEWER ========================
+    st.markdown("### 📊 Letter Generation Log")
+    st.markdown("**View and search all generated letters for lead tracking and edits**")
     
-    with col1:
-        search_company = st.text_input("🔍 Search by Company", placeholder="Enter company name...")
-    with col2:
-        search_meeting = st.text_input("🔍 Search by Meeting", placeholder="Enter meeting name...")
-    with col3:
-        doc_type_filter = st.selectbox("📄 Filter by Document Type", ["All", "LOR", "LOA"])
+    # Get letter log
+    letter_log = get_letter_log()
+    letters = letter_log.get("letters", [])
     
-    # Filter letters
-    filtered_letters = letters
-    if search_company:
-        filtered_letters = [l for l in filtered_letters if search_company.lower() in l.get("company_name", "").lower()]
-    if search_meeting:
-        filtered_letters = [l for l in filtered_letters if search_meeting.lower() in l.get("meeting_name", "").lower()]
-    if doc_type_filter != "All":
-        filtered_letters = [l for l in filtered_letters if l.get("document_type") == doc_type_filter]
+    if letters:
+        # Search and filter options
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            search_company = st.text_input("🔍 Search by Company", placeholder="Enter company name...", key="search_company")
+        with col2:
+            search_meeting = st.text_input("🔍 Search by Meeting", placeholder="Enter meeting name...", key="search_meeting")
+        with col3:
+            doc_type_filter = st.selectbox("📄 Filter by Document Type", ["All", "LOR", "LOA"], key="doc_filter")
+        
+        # Filter letters
+        filtered_letters = letters
+        if search_company:
+            filtered_letters = [l for l in filtered_letters if search_company.lower() in l.get("company_name", "").lower()]
+        if search_meeting:
+            filtered_letters = [l for l in filtered_letters if search_meeting.lower() in l.get("meeting_name", "").lower()]
+        if doc_type_filter != "All":
+            filtered_letters = [l for l in filtered_letters if l.get("document_type") == doc_type_filter]
+        
+        # Display results
+        st.markdown(f"**Found {len(filtered_letters)} letters** (Total: {len(letters)})")
+        
+        # Show letters in reverse chronological order (newest first)
+        for i, letter in enumerate(reversed(filtered_letters[-50:])):  # Show last 50
+            with st.expander(f"📄 {letter.get('company_name', 'Unknown')} - {letter.get('meeting_name', 'Unknown')} ({letter.get('document_type', 'Unknown')})", expanded=False):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write(f"**Company:** {letter.get('company_name', 'N/A')}")
+                    st.write(f"**Meeting:** {letter.get('meeting_name', 'N/A')}")
+                    st.write(f"**Document Type:** {letter.get('document_type', 'N/A')}")
+                    st.write(f"**Booth Selected:** {letter.get('booth_selected', 'N/A')}")
+                    st.write(f"**Add-ons:** {', '.join(letter.get('add_ons', [])) if letter.get('add_ons') else 'None'}")
+                
+                with col2:
+                    st.write(f"**Total Cost:** ${letter.get('total_cost', 0):,.2f}")
+                    st.write(f"**Generated:** {letter.get('timestamp', 'N/A')[:19]}")
+                    if letter.get('additional_info'):
+                        st.write(f"**Additional Info:** {letter.get('additional_info', 'N/A')[:100]}...")
+                
+                # Quick actions
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button(f"📋 Copy Details", key=f"copy_{i}"):
+                        st.write("Details copied to clipboard!")
+                with col2:
+                    if st.button(f"📧 Email Info", key=f"email_{i}"):
+                        st.write("Email template ready!")
+                with col3:
+                    if st.button(f"🔄 Regenerate", key=f"regen_{i}"):
+                        st.write("Ready to regenerate with same settings!")
+    else:
+        st.info("📝 **No letters generated yet.** Generate your first letter to start tracking!")
     
-    # Display results
-    st.markdown(f"**Found {len(filtered_letters)} letters** (Total: {len(letters)})")
-    
-    # Show letters in reverse chronological order (newest first)
-    for i, letter in enumerate(reversed(filtered_letters[-20:])):  # Show last 20
-        with st.expander(f"📄 {letter.get('company_name', 'Unknown')} - {letter.get('meeting_name', 'Unknown')} ({letter.get('document_type', 'Unknown')})", expanded=False):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.write(f"**Company:** {letter.get('company_name', 'N/A')}")
-                st.write(f"**Meeting:** {letter.get('meeting_name', 'N/A')}")
-                st.write(f"**Document Type:** {letter.get('document_type', 'N/A')}")
-                st.write(f"**Booth Selected:** {letter.get('booth_selected', 'N/A')}")
-                st.write(f"**Add-ons:** {', '.join(letter.get('add_ons', [])) if letter.get('add_ons') else 'None'}")
-            
-            with col2:
-                st.write(f"**Total Cost:** ${letter.get('total_cost', 0):,.2f}")
-                st.write(f"**Generated:** {letter.get('timestamp', 'N/A')[:19]}")
-                if letter.get('additional_info'):
-                    st.write(f"**Additional Info:** {letter.get('additional_info', 'N/A')[:100]}...")
-            
-            # Quick actions
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button(f"📋 Copy Details", key=f"copy_{i}"):
-                    st.write("Details copied to clipboard!")
-            with col2:
-                if st.button(f"📧 Email Info", key=f"email_{i}"):
-                    st.write("Email template ready!")
-            with col3:
-                if st.button(f"🔄 Regenerate", key=f"regen_{i}"):
-                    st.write("Ready to regenerate with same settings!")
-else:
-    st.info("📝 **No letters generated yet.** Generate your first letter to start tracking!")
+    # Summary statistics
+    if letters:
+        st.markdown("---")
+        st.markdown("### 📈 Summary Statistics")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Letters", len(letters))
+        with col2:
+            lor_count = len([l for l in letters if l.get('document_type') == 'LOR'])
+            st.metric("LORs", lor_count)
+        with col3:
+            loa_count = len([l for l in letters if l.get('document_type') == 'LOA'])
+            st.metric("LOAs", loa_count)
+        with col4:
+            total_revenue = sum([l.get('total_cost', 0) for l in letters])
+            st.metric("Total Revenue", f"${total_revenue:,.2f}")
 
-st.markdown("---")
-
-# ======================== EXCEL BULK GENERATION ========================
-st.markdown("---")
-st.markdown("---")
-
-# Excel Bulk Generation Tab
-st.markdown("### 📊 Excel Bulk Letter Generator")
-st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
+with tab3:
+    # ======================== EXCEL BULK GENERATION ========================
+    st.markdown("### 📊 Excel Bulk Letter Generator")
+    st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
 
 
-# Excel bulk section - clean approach without CSS overrides
+    # Excel bulk section - clean approach without CSS overrides
 
-# Instructions
-with st.expander("📋 How To Use Excel Bulk Mode", expanded=False):
-    st.markdown("""
-    ### Step-by-Step Guide:
+    # Instructions
+    with st.expander("📋 How To Use Excel Bulk Mode", expanded=False):
+        st.markdown("""
+        ### Step-by-Step Guide:
+        
+        1. **Prepare your Excel file** with these columns:
+           - `Exhibitor Invite` (required) - Used for filename
+           - `Event Name` (required) - Will be matched to system events  
+           - `Total` (required) - Final price shown in letter
+           - `Company Name` (optional) - Company name in letter (defaults to "[Company Name]")
+           - `Expected Attendance` (optional) - Override system attendance
+           - `Date`, `City`, `Venue`, `Official Address` (optional) - Override system defaults
+           - `Amount`, `Discount` (optional) - For reference
+        
+        2. **Upload the Excel file** below
+        
+        3. **Review the preview** to make sure data loaded correctly
+        
+        4. **Click Generate** button
     
-    1. **Prepare your Excel file** with these columns:
-       - `Exhibitor Invite` (required) - Used for filename
-       - `Event Name` (required) - Will be matched to system events  
-       - `Total` (required) - Final price shown in letter
-       - `Company Name` (optional) - Company name in letter (defaults to "[Company Name]")
-       - `Expected Attendance` (optional) - Override system attendance
-       - `Date`, `City`, `Venue`, `Official Address` (optional) - Override system defaults
-       - `Amount`, `Discount` (optional) - For reference
-    
-    2. **Upload the Excel file** below
-    
-    3. **Review the preview** to make sure data loaded correctly
-    
-    4. **Click Generate** button
-    
-    5. **Download ZIP** with all your letters!
-    
-    ### Example Excel Format:
-    ```
-    Exhibitor Invite | Event Name | Date | City | Venue | Official Address | Amount | Discount | Total
-    2026 ASCO Denver Invite | 2026 ASCO Direct Denver | June 27-28 | Denver, CO | Denver Marriott Westminster | 7000 Church Ranch Blvd... | $7,500 | 10% | $6,750
-    ```
-    """)
+        5. **Download ZIP** with all your letters!
+        
+        ### Example Excel Format:
+        ```
+        Exhibitor Invite | Event Name | Date | City | Venue | Official Address | Amount | Discount | Total
+        2026 ASCO Denver Invite | 2026 ASCO Direct Denver | June 27-28 | Denver, CO | Denver Marriott Westminster | 7000 Church Ranch Blvd... | $7,500 | 10% | $6,750
+        ```
+        """)
 
-# Company name input (applies to all letters)
-st.markdown("#### 🏢 Company Information")
-bulk_company_name = st.text_input(
-    "Company Name (applies to all letters in Excel)",
+    # Company name input (applies to all letters)
+    st.markdown("#### 🏢 Company Information")
+    bulk_company_name = st.text_input(
+        "Company Name (applies to all letters in Excel)",
     placeholder="e.g., Novartis Pharmaceuticals Corporation",
     help="This company name will be used in all generated letters",
     key="bulk_company_name"
@@ -2531,9 +2548,7 @@ else:
     except:
         st.write("Example columns: Exhibitor Invite, Event Name, Date, City, Total")
     
-    st.info("💡 **Tip:** Create your Excel file with the same column structure as shown above")
-
-st.markdown("---")
+        st.info("💡 **Tip:** Create your Excel file with the same column structure as shown above")
 
 # ======================== ADDITIONAL RESOURCES ========================
 st.markdown("---")
