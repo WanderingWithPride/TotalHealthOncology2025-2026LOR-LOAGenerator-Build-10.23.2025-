@@ -2598,11 +2598,9 @@ with st.expander("📚 Additional Resources & Help", expanded=False):
     
     ✅ **Single Event Mode** - Generate individual LOR/LOA documents
     ✅ **Multi-Meeting Mode** - Generate quarterly package documents  
-    ✅ **Excel Bulk Mode** - Upload Excel spreadsheet for bulk document generation
     
     **Need Help?**
     - All functionality is available in this single application
-    - Use the Excel Bulk Letter Generator section above for bulk processing
+    - Use the tabs above to navigate between different features
     - Contact your system administrator for technical support
     """)
-
