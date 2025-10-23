@@ -249,8 +249,6 @@ def read_first_existing(paths) -> Optional[bytes]:
             return fp.read_bytes()
     return None
 
-logo_bytes_default = read_first_existing(DEFAULT_LOGO_PATHS)
-sig_bytes_default = read_first_existing(DEFAULT_SIG_PATHS)
 def render_letter_paragraphs(payload: Dict, document_type: str = 'LOR') -> List[str]:
     """Generate letter paragraphs from payload"""
     if document_type == 'LOA':
@@ -913,6 +911,530 @@ TH_COLORS = {
 }
 
 # Custom CSS for Total Health branding
+st.markdown(f"""
+<style>
+    /* Total Health Brand Styling */
+    .main {{
+        background: #f8f9fa !important;
+        min-height: 100vh;
+    }}
+    
+    .main .block-container {{
+        background: #f8f9fa !important;
+        padding: 2rem;
+        max-width: 1200px;
+    }}
+    
+    /* Header Styling */
+    .main-header {{
+        background: white !important;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 2px solid {TH_COLORS['primary']};
+    }}
+    
+    .logo-container {{
+        margin-bottom: 1rem;
+    }}
+    
+    .logo-container img {{
+        max-width: 480px;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }}
+    
+    .logo-container {{
+        margin-bottom: 1rem;
+        text-align: center;
+    }}
+    
+    h1 {{
+        color: {TH_COLORS['primary']};
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }}
+    
+    .version-info {{
+        color: {TH_COLORS['secondary']};
+        font-size: 0.9rem;
+        font-style: italic;
+        margin-top: 0.5rem;
+    }}
+    
+    .status-badge {{
+        display: inline-block;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-top: 1rem;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }}
+    
+    .last-updated {{
+        color: {TH_COLORS['secondary']};
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+    }}
+    
+    /* Form Styling */
+    .stContainer {{
+        background: white !important;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid {TH_COLORS['light_gray']};
+    }}
+    
+    .section-header {{
+        color: {TH_COLORS['primary']};
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        border-bottom: 2px solid {TH_COLORS['accent']};
+        padding-bottom: 0.5rem;
+    }}
+    
+    /* Form Controls */
+    .stSelectbox > div > div {{
+        background: white !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+    }}
+    
+    .stSelectbox > div > div:focus {{
+        border-color: {TH_COLORS['primary']} !important;
+        box-shadow: 0 0 0 3px rgba(1, 57, 85, 0.1) !important;
+    }}
+    
+    .stTextInput > div > div > input {{
+        background: white !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+        color: {TH_COLORS['black']} !important;
+    }}
+    
+    .stTextInput > div > div > input:focus {{
+        border-color: {TH_COLORS['primary']} !important;
+        box-shadow: 0 0 0 3px rgba(1, 57, 85, 0.1) !important;
+    }}
+    
+    .stNumberInput > div > div > input {{
+        background: white !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+        color: {TH_COLORS['black']} !important;
+    }}
+    
+    .stTextArea > div > div > textarea {{
+        background: white !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+        color: {TH_COLORS['black']} !important;
+    }}
+    
+    .stMultiselect > div > div {{
+        background: white !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+    }}
+    
+    .stRadio > div {{
+        background: white !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+    }}
+    
+    /* Button Styling */
+    .stButton > button {{
+        background: {TH_COLORS['primary']} !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+    }}
+    
+    .stButton > button:hover {{
+        background: {TH_COLORS['secondary']} !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    }}
+    
+    /* NUCLEAR READABILITY FIX - FORCE ALL TEXT TO BE READABLE */
+    
+    /* Force ALL elements to have black text */
+    *, *::before, *::after {{
+        color: #000000 !important;
+    }}
+    
+    /* Force ALL text elements */
+    p, div, span, label, input, textarea, select, option, button, h1, h2, h3, h4, h5, h6,
+    .stMarkdown, .stMarkdown p, .stMarkdown div, .stMarkdown span, .stMarkdown strong, .stMarkdown em,
+    .stSelectbox, .stTextInput, .stNumberInput, .stTextArea, .stMultiselect, .stRadio, .stButton {{
+        color: #000000 !important;
+    }}
+    
+    /* Force ALL form elements to have white backgrounds */
+    .stSelectbox, .stTextInput, .stNumberInput, .stTextArea, .stMultiselect, .stRadio, .stButton,
+    .stSelectbox > div, .stTextInput > div, .stNumberInput > div, .stTextArea > div, .stMultiselect > div, .stRadio > div {{
+        background: white !important;
+        color: #000000 !important;
+    }}
+    
+    /* Force ALL inputs and dropdowns */
+    input, textarea, select, [role="combobox"], [role="listbox"], [role="option"] {{
+        background: white !important;
+        color: #000000 !important;
+        border: 1px solid #cccccc !important;
+    }}
+    
+    /* Force ALL labels */
+    label, .stSelectbox label, .stTextInput label, .stNumberInput label, .stTextArea label, .stMultiselect label, .stRadio label {{
+        color: #000000 !important;
+        background: transparent !important;
+    }}
+    
+    /* Force ALL success/info messages */
+    .stSuccess, .stInfo, .stWarning, .stError, .stAlert {{
+        background: white !important;
+        color: #000000 !important;
+        border: 1px solid #cccccc !important;
+    }}
+    
+    /* Force ALL Streamlit widgets */
+    [data-testid="stSelectbox"], [data-testid="stTextInput"], [data-testid="stNumberInput"], 
+    [data-testid="stTextArea"], [data-testid="stMultiselect"], [data-testid="stRadio"], 
+    [data-testid="stButton"], [data-testid="stMarkdown"] {{
+        background: white !important;
+        color: #000000 !important;
+    }}
+    
+    /* Force ALL dropdown options */
+    [role="menu"], [role="option"], [data-baseweb="select"], [data-baseweb="popover"] {{
+        background: white !important;
+        color: #000000 !important;
+    }}
+    
+    /* Override any Streamlit default styling */
+    .stApp, .main, .block-container {{
+        background: #f8f9fa !important;
+    }}
+    
+    /* Force all containers to be white */
+    .stContainer, .stSelectbox, .stTextInput, .stNumberInput, .stTextArea, .stMultiselect, .stRadio {{
+        background: white !important;
+        border: 1px solid #e0e0e0 !important;
+    }}
+    
+    /* Fix button styling - remove white backgrounds from buttons */
+    .stButton > button {{
+        background: {TH_COLORS['primary']} !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+    }}
+    
+    .stButton > button:hover {{
+        background: {TH_COLORS['secondary']} !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    }}
+    
+    /* Remove white backgrounds from success/info messages */
+    .stSuccess {{
+        background: #d4edda !important;
+        color: #155724 !important;
+        border: 1px solid #c3e6cb !important;
+    }}
+    
+    .stInfo {{
+        background: #d1ecf1 !important;
+        color: #0c5460 !important;
+        border: 1px solid #bee5eb !important;
+    }}
+    
+    .stWarning {{
+        background: #fff3cd !important;
+        color: #856404 !important;
+        border: 1px solid #ffeaa7 !important;
+    }}
+    
+    .stError {{
+        background: #f8d7da !important;
+        color: #721c24 !important;
+        border: 1px solid #f5c6cb !important;
+    }}
+    
+    /* Fix text color for buttons and other elements */
+    .stButton > button, .stButton > button * {{
+        color: white !important;
+    }}
+    
+    /* Ensure button text is white */
+    button, button * {{
+        color: white !important;
+    }}
+    
+    /* Fix any other white text issues */
+    .stButton button span {{
+        color: white !important;
+    }}
+    
+    /* Fix expandable section headers */
+    .streamlit-expanderHeader {{
+        color: #000000 !important;
+        background: white !important;
+    }}
+    
+    .streamlit-expanderHeader:hover {{
+        color: #000000 !important;
+        background: #f8f9fa !important;
+    }}
+    
+    /* Fix all expandable content */
+    .streamlit-expander {{
+        background: white !important;
+        color: #000000 !important;
+    }}
+    
+    .streamlit-expanderContent {{
+        background: white !important;
+        color: #000000 !important;
+    }}
+    
+    /* Fix checkbox labels */
+    .stCheckbox label {{
+        color: #000000 !important;
+        background: transparent !important;
+    }}
+    
+    /* Fix any other dark text issues */
+    .stExpander, .stExpander * {{
+        color: #000000 !important;
+    }}
+    
+    /* Hide Streamlit branding */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+    header {{visibility: hidden;}}
+    
+    /* Excel Bulk Section Styling */
+    .excel-bulk-section {{
+        background: linear-gradient(135deg, {TH_COLORS['primary']}15, {TH_COLORS['secondary']}15) !important;
+        padding: 1.5rem !important;
+        border-radius: 12px !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        margin: 1rem 0 !important;
+    }}
+    
+    /* Override all dark elements in Excel bulk section */
+    .excel-bulk-section * {{
+        color: {TH_COLORS['primary']} !important;
+        background-color: transparent !important;
+    }}
+    
+    .excel-bulk-section .stTextInput input {{
+        background: white !important;
+        border: 2px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+        color: {TH_COLORS['primary']} !important;
+    }}
+    
+    .excel-bulk-section .stTextInput input:focus {{
+        border-color: {TH_COLORS['primary']} !important;
+        box-shadow: 0 0 0 2px {TH_COLORS['primary']}20 !important;
+    }}
+    
+    .excel-bulk-section .stRadio {{
+        background: white !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+    }}
+    
+    .excel-bulk-section .stRadio * {{
+        color: {TH_COLORS['primary']} !important;
+        background: transparent !important;
+    }}
+    
+    .excel-bulk-section .stFileUploader {{
+        background: white !important;
+        border: 2px dashed {TH_COLORS['primary']} !important;
+        border-radius: 8px !important;
+        padding: 2rem !important;
+    }}
+    
+    .excel-bulk-section .stFileUploader * {{
+        color: {TH_COLORS['primary']} !important;
+        background: transparent !important;
+    }}
+    
+    .excel-bulk-section .stFileUploader:hover {{
+        border-color: {TH_COLORS['secondary']} !important;
+        background: {TH_COLORS['light_gray']} !important;
+    }}
+    
+    .excel-bulk-section .stButton button {{
+        background: {TH_COLORS['primary']} !important;
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 2rem !important;
+        font-weight: 600 !important;
+        border: none !important;
+    }}
+    
+    .excel-bulk-section .stButton button:hover {{
+        background: {TH_COLORS['secondary']} !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    }}
+    
+    .excel-bulk-section .stSuccess {{
+        background: {TH_COLORS['primary']}10 !important;
+        border: 1px solid {TH_COLORS['primary']} !important;
+        border-radius: 8px !important;
+        color: {TH_COLORS['primary']} !important;
+    }}
+    
+    .excel-bulk-section .stInfo {{
+        background: {TH_COLORS['accent']}10 !important;
+        border: 1px solid {TH_COLORS['accent']} !important;
+        border-radius: 8px !important;
+        color: {TH_COLORS['secondary']} !important;
+    }}
+    
+    .excel-bulk-section .stError {{
+        background: #ffebee !important;
+        border: 1px solid #f44336 !important;
+        border-radius: 8px !important;
+        color: #d32f2f !important;
+    }}
+    
+    .excel-bulk-section .stWarning {{
+        background: #fff3e0 !important;
+        border: 1px solid #ff9800 !important;
+        border-radius: 8px !important;
+        color: #f57c00 !important;
+    }}
+    
+    .excel-bulk-section .stExpander {{
+        background: white !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+    }}
+    
+    .excel-bulk-section .stExpander * {{
+        color: {TH_COLORS['primary']} !important;
+        background: transparent !important;
+    }}
+    
+    .excel-bulk-section .stDataFrame {{
+        background: white !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+    }}
+    
+    .excel-bulk-section .stDataFrame * {{
+        color: {TH_COLORS['primary']} !important;
+        background: transparent !important;
+    }}
+    
+    .excel-bulk-section .stMetric {{
+        background: white !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+    }}
+    
+    .excel-bulk-section .stMetric * {{
+        color: {TH_COLORS['primary']} !important;
+        background: transparent !important;
+    }}
+    
+    /* Specific overrides for file uploader and dataframe */
+    .excel-bulk-section [data-testid="stFileUploader"] {{
+        background: white !important;
+        border: 2px dashed {TH_COLORS['primary']} !important;
+        border-radius: 8px !important;
+        padding: 2rem !important;
+    }}
+    
+    .excel-bulk-section [data-testid="stFileUploader"] * {{
+        color: {TH_COLORS['primary']} !important;
+        background: transparent !important;
+    }}
+    
+    .excel-bulk-section [data-testid="stFileUploader"] .uploadedFile {{
+        background: white !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+        color: {TH_COLORS['primary']} !important;
+    }}
+    
+    .excel-bulk-section [data-testid="stDataFrame"] {{
+        background: white !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+        border-radius: 8px !important;
+    }}
+    
+    .excel-bulk-section [data-testid="stDataFrame"] * {{
+        color: {TH_COLORS['primary']} !important;
+        background: white !important;
+    }}
+    
+    .excel-bulk-section [data-testid="stDataFrame"] table {{
+        background: white !important;
+        color: {TH_COLORS['primary']} !important;
+    }}
+    
+    .excel-bulk-section [data-testid="stDataFrame"] th {{
+        background: {TH_COLORS['light_gray']} !important;
+        color: {TH_COLORS['primary']} !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+    }}
+    
+    .excel-bulk-section [data-testid="stDataFrame"] td {{
+        background: white !important;
+        color: {TH_COLORS['primary']} !important;
+        border: 1px solid {TH_COLORS['light_gray']} !important;
+    }}
+    
+    /* Override any Streamlit dark theme */
+    .excel-bulk-section .stApp {{
+        background: white !important;
+    }}
+    
+    .excel-bulk-section .main {{
+        background: white !important;
+    }}
+    
+    .excel-bulk-section .block-container {{
+        background: white !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
+# Load assets
+logo_bytes_default = read_first_existing(DEFAULT_LOGO_PATHS)
+sig_bytes_default = read_first_existing(DEFAULT_SIG_PATHS)
+
+# Header
+current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+
 st.markdown(f"""
 <div class="main-header">
     <div class="logo-container">
