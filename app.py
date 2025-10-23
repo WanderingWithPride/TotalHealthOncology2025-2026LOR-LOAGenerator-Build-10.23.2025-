@@ -219,8 +219,6 @@ EVENTS = [
 # Default asset paths
 DEFAULT_LOGO_PATHS = ["th_logo.png", "th_logo.jpg", "TH Logo.png", "TH Logo.jpg"]
 DEFAULT_SIG_PATHS = ["sarah_signature.png", "sarah_signature.jpg", "Sarah signature.png", "Sarah signature.jpg"]
-logo_bytes_default = read_first_existing(DEFAULT_LOGO_PATHS)
-sig_bytes_default = read_first_existing(DEFAULT_SIG_PATHS)
 
 # ---------------------- Helper Functions ----------------------
 
@@ -251,6 +249,8 @@ def read_first_existing(paths) -> Optional[bytes]:
             return fp.read_bytes()
     return None
 
+logo_bytes_default = read_first_existing(DEFAULT_LOGO_PATHS)
+sig_bytes_default = read_first_existing(DEFAULT_SIG_PATHS)
 def render_letter_paragraphs(payload: Dict, document_type: str = 'LOR') -> List[str]:
     """Generate letter paragraphs from payload"""
     if document_type == 'LOA':
