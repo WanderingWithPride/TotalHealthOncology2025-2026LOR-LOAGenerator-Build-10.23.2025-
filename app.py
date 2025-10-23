@@ -914,7 +914,9 @@ TH_COLORS = {
 st.markdown(f"""
 <div class="main-header">
     <div class="logo-container">
+logo_bytes_default = read_first_existing(DEFAULT_LOGO_PATHS)
         {"<img src='data:image/png;base64,{}' alt='Total Health Logo'>".format(base64.b64encode(logo_bytes_default).decode()) if logo_bytes_default else "🏥"}
+sig_bytes_default = read_first_existing(DEFAULT_SIG_PATHS)
     </div>
     <h1>LOR/LOA Generator</h1>
     <div class="version-info">v46.0</div>
