@@ -1252,28 +1252,38 @@ st.markdown(f"""
         border: 1px solid #e0e0e0 !important;
     }}
     
-    /* Fix tab navigation styling */
-    .stTabs [data-baseweb="tab-list"] {{
+    /* Fix tab navigation styling - NUCLEAR APPROACH */
+    .stTabs [data-baseweb="tab-list"] button {{
         background: white !important;
-        border-bottom: 2px solid {TH_COLORS['primary']} !important;
+        color: #013955 !important;
+        border: 1px solid #013955 !important;
+        font-weight: 600 !important;
     }}
     
-    .stTabs [data-baseweb="tab"] {{
-        background: white !important;
-        color: {TH_COLORS['primary']} !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-        border-bottom: none !important;
-    }}
-    
-    .stTabs [data-baseweb="tab"]:hover {{
-        background: {TH_COLORS['primary']}15 !important;
-        color: {TH_COLORS['primary']} !important;
-    }}
-    
-    .stTabs [aria-selected="true"] {{
-        background: {TH_COLORS['primary']} !important;
+    .stTabs [data-baseweb="tab-list"] button:hover {{
+        background: #013955 !important;
         color: white !important;
-        border-color: {TH_COLORS['primary']} !important;
+    }}
+    
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {{
+        background: #013955 !important;
+        color: white !important;
+        border-color: #013955 !important;
+    }}
+    
+    /* Force all tab text to be dark */
+    .stTabs * {{
+        color: #013955 !important;
+    }}
+    
+    .stTabs button {{
+        color: #013955 !important;
+        background: white !important;
+    }}
+    
+    .stTabs button[aria-selected="true"] {{
+        color: white !important;
+        background: #013955 !important;
     }}
     
     /* Fix button styling - remove white backgrounds from buttons */
