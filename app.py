@@ -2587,20 +2587,3 @@ else:
     
         st.info("💡 **Tip:** Create your Excel file with the same column structure as shown above")
 
-# ======================== ADDITIONAL RESOURCES ========================
-st.markdown("---")
-st.markdown("---")
-
-with st.expander("📚 Additional Resources & Help", expanded=False):
-    st.markdown("### 📚 Help & Documentation")
-    st.info("""
-    **All Features Integrated in This Application:**
-    
-    ✅ **Single Event Mode** - Generate individual LOR/LOA documents
-    ✅ **Multi-Meeting Mode** - Generate quarterly package documents  
-    
-    **Need Help?**
-    - All functionality is available in this single application
-    - Use the tabs above to navigate between different features
-    - Contact your system administrator for technical support
-    """)
