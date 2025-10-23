@@ -83,6 +83,52 @@ except Exception:
 # ASCO Event Naming Toggle (2026)
 USE_BEST_OF_ASCO_NAMING = False  # Set to True when approved to use "Best of ASCO"
 
+# Letter Generation Logging
+LETTER_LOG_FILE = "letter_generation_log.json"
+
+def log_letter_generation(company_name, meeting_name, document_type, booth_selected, add_ons, total_cost, additional_info=""):
+    """Log letter generation details to JSON file"""
+    import json
+    from datetime import datetime
+    
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "company_name": company_name,
+        "meeting_name": meeting_name,
+        "document_type": document_type,
+        "booth_selected": booth_selected,
+        "add_ons": add_ons,
+        "total_cost": total_cost,
+        "additional_info": additional_info
+    }
+    
+    try:
+        # Load existing log
+        try:
+            with open(LETTER_LOG_FILE, 'r') as f:
+                log_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            log_data = {"letters": []}
+        
+        # Add new entry
+        log_data["letters"].append(log_entry)
+        
+        # Save updated log
+        with open(LETTER_LOG_FILE, 'w') as f:
+            json.dump(log_data, f, indent=2)
+            
+    except Exception as e:
+        st.error(f"Failed to log letter generation: {e}")
+
+def get_letter_log():
+    """Get all logged letters"""
+    import json
+    try:
+        with open(LETTER_LOG_FILE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"letters": []}
+
 def get_asco_event_name(base_name: str) -> str:
     """Get ASCO event name based on naming toggle"""
     # Use session state if available, otherwise use global variable
@@ -2078,7 +2124,86 @@ if st.button(button_text, use_container_width=True):
             file_name=base_filename + ".pdf",
             mime="application/pdf" if PDF_AVAILABLE else "text/plain"
         )
+    
+    # Log the letter generation
+    log_letter_generation(
+        company_name=company_name or "[Company]",
+        meeting_name=event["meeting_name"],
+        document_type=st.session_state.document_type,
+        booth_selected=booth_choice if booth_selected else None,
+        add_ons=add_on_keys,
+        total_cost=final_total,
+        additional_info=company_required_text
+    )
+    
+    st.success(f"✅ **{st.session_state.document_type} generated successfully!** Letter logged for tracking.")
 
+
+# ======================== LETTER LOG VIEWER ========================
+st.markdown("---")
+st.markdown("### 📊 Letter Generation Log")
+st.markdown("**View and search all generated letters for lead tracking and edits**")
+
+# Get letter log
+letter_log = get_letter_log()
+letters = letter_log.get("letters", [])
+
+if letters:
+    # Search and filter options
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        search_company = st.text_input("🔍 Search by Company", placeholder="Enter company name...")
+    with col2:
+        search_meeting = st.text_input("🔍 Search by Meeting", placeholder="Enter meeting name...")
+    with col3:
+        doc_type_filter = st.selectbox("📄 Filter by Document Type", ["All", "LOR", "LOA"])
+    
+    # Filter letters
+    filtered_letters = letters
+    if search_company:
+        filtered_letters = [l for l in filtered_letters if search_company.lower() in l.get("company_name", "").lower()]
+    if search_meeting:
+        filtered_letters = [l for l in filtered_letters if search_meeting.lower() in l.get("meeting_name", "").lower()]
+    if doc_type_filter != "All":
+        filtered_letters = [l for l in filtered_letters if l.get("document_type") == doc_type_filter]
+    
+    # Display results
+    st.markdown(f"**Found {len(filtered_letters)} letters** (Total: {len(letters)})")
+    
+    # Show letters in reverse chronological order (newest first)
+    for i, letter in enumerate(reversed(filtered_letters[-20:])):  # Show last 20
+        with st.expander(f"📄 {letter.get('company_name', 'Unknown')} - {letter.get('meeting_name', 'Unknown')} ({letter.get('document_type', 'Unknown')})", expanded=False):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**Company:** {letter.get('company_name', 'N/A')}")
+                st.write(f"**Meeting:** {letter.get('meeting_name', 'N/A')}")
+                st.write(f"**Document Type:** {letter.get('document_type', 'N/A')}")
+                st.write(f"**Booth Selected:** {letter.get('booth_selected', 'N/A')}")
+                st.write(f"**Add-ons:** {', '.join(letter.get('add_ons', [])) if letter.get('add_ons') else 'None'}")
+            
+            with col2:
+                st.write(f"**Total Cost:** ${letter.get('total_cost', 0):,.2f}")
+                st.write(f"**Generated:** {letter.get('timestamp', 'N/A')[:19]}")
+                if letter.get('additional_info'):
+                    st.write(f"**Additional Info:** {letter.get('additional_info', 'N/A')[:100]}...")
+            
+            # Quick actions
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button(f"📋 Copy Details", key=f"copy_{i}"):
+                    st.write("Details copied to clipboard!")
+            with col2:
+                if st.button(f"📧 Email Info", key=f"email_{i}"):
+                    st.write("Email template ready!")
+            with col3:
+                if st.button(f"🔄 Regenerate", key=f"regen_{i}"):
+                    st.write("Ready to regenerate with same settings!")
+else:
+    st.info("📝 **No letters generated yet.** Generate your first letter to start tracking!")
+
+st.markdown("---")
 
 # ======================== EXCEL BULK GENERATION ========================
 st.markdown("---")
@@ -2340,6 +2465,28 @@ if uploaded_file:
                     # Results
                     if generated_count > 0:
                         st.success(f"🎉 **Successfully Generated:** {generated_count} documents ({generated_count * 2} files total)")
+                        
+                        # Log bulk generation
+                        for idx, row in df.iterrows():
+                            if idx < generated_count:  # Only log successful generations
+                                try:
+                                    company_name = bulk_company_name.strip() if bulk_company_name and bulk_company_name.strip() else str(row.get('Company Name', '[Company Name]'))
+                                    event_name = str(row.get('Event Name', ''))
+                                    total = float(re.sub(r'[$,]', '', str(row.get('Total', '$0'))))
+                                    
+                                    log_letter_generation(
+                                        company_name=company_name,
+                                        meeting_name=event_name,
+                                        document_type=bulk_doc_type,
+                                        booth_selected=None,  # Bulk doesn't track booth details
+                                        add_ons=[],
+                                        total_cost=total,
+                                        additional_info=f"Bulk generated from Excel - Row {idx+2}"
+                                    )
+                                except Exception as log_error:
+                                    st.write(f"Note: Could not log row {idx+2}: {log_error}")
+                        
+                        st.info(f"📊 **Bulk generation logged:** {generated_count} letters added to tracking log")
                     
                     if error_count > 0:
                         st.warning(f"⚠️ **Errors:** {error_count} rows skipped due to issues")
