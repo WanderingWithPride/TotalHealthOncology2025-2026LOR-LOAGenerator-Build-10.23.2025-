@@ -281,6 +281,31 @@ def read_first_existing(paths) -> Optional[bytes]:
             return fp.read_bytes()
     return None
 
+# Embedded images for Streamlit Cloud deployment
+def get_embedded_logo() -> Optional[bytes]:
+    """Get embedded logo for cloud deployment"""
+    try:
+        # Try to read from file first
+        logo_bytes = read_first_existing(DEFAULT_LOGO_PATHS)
+        if logo_bytes:
+            return logo_bytes
+    except:
+        pass
+    # Fallback: return None (no logo)
+    return None
+
+def get_embedded_signature() -> Optional[bytes]:
+    """Get embedded signature for cloud deployment"""
+    try:
+        # Try to read from file first
+        sig_bytes = read_first_existing(DEFAULT_SIG_PATHS)
+        if sig_bytes:
+            return sig_bytes
+    except:
+        pass
+    # Fallback: return None (no signature)
+    return None
+
 def render_letter_paragraphs(payload: Dict, document_type: str = 'LOR') -> List[str]:
     """Generate letter paragraphs from payload"""
     if document_type == 'LOA':
@@ -1461,8 +1486,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Load assets
-logo_bytes_default = read_first_existing(DEFAULT_LOGO_PATHS)
-sig_bytes_default = read_first_existing(DEFAULT_SIG_PATHS)
+logo_bytes_default = get_embedded_logo()
+sig_bytes_default = get_embedded_signature()
 
 # Header
 current_time = datetime.now().strftime("%B %d, %Y at %I:%M %p")
@@ -2237,8 +2262,8 @@ if uploaded_file:
                                 paragraphs = render_letter_paragraphs(payload, bulk_doc_type)
                                 
                                 # Load assets
-                                logo_bytes = read_first_existing(DEFAULT_LOGO_PATHS)
-                                sig_bytes = read_first_existing(DEFAULT_SIG_PATHS)
+                                logo_bytes = get_embedded_logo()
+                                sig_bytes = get_embedded_signature()
                                 
                                 # Generate documents
                                 docx_bytes = build_docx_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
