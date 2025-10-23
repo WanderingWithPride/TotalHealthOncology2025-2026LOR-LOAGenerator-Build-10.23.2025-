@@ -1265,23 +1265,26 @@ st.markdown(f"""
         color: white !important;
     }}
     
+    /* CRITICAL: Selected tab must have white text */
     .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {{
         background: #013955 !important;
         color: white !important;
         border-color: #013955 !important;
     }}
     
-    /* Force all tab text to be dark */
-    .stTabs * {{
-        color: #013955 !important;
-    }}
-    
-    .stTabs button {{
+    /* Force unselected tabs to have dark text */
+    .stTabs button:not([aria-selected="true"]) {{
         color: #013955 !important;
         background: white !important;
     }}
     
-    .stTabs button[aria-selected="true"] {{
+    /* Override any other styling for selected tab */
+    .stTabs button[aria-selected="true"] * {{
+        color: white !important;
+    }}
+    
+    /* Force selected tab text to be white */
+    .stTabs [aria-selected="true"] {{
         color: white !important;
         background: #013955 !important;
     }}
