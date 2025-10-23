@@ -2048,44 +2048,44 @@ with st.container():
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Progress indicator
-st.markdown("---")
-st.markdown("### 📋 Document Generation Progress")
+    # Progress indicator
+    st.markdown("---")
+    st.markdown("### 📋 Document Generation Progress")
 
-# Check if all required fields are filled
-required_fields = {
-    "Event": event_choice if event_choice else None,
-    "Company": company_name,
-    "Document Type": st.session_state.document_type
-}
-
-missing_fields = [field for field, value in required_fields.items() if not value or value.strip() == ""]
-
-if missing_fields:
-    st.warning(f"⚠️ **Please complete:** {', '.join(missing_fields)}")
-    st.info("💡 **Tip:** All required fields must be completed before generating the document.")
-else:
-    st.success("✅ **All required fields completed** - Ready to generate document!")
-
-st.markdown("---")
-
-# Generate button and downloads
-button_text = "🚀 Generate LOA" if st.session_state.document_type == 'LOA' else "🚀 Generate Letter"
-if st.button(button_text, use_container_width=True):
-    payload = {
-        "company_name": (company_name or "[Company]").strip(),
-        "meeting_name": event["meeting_name"],
-        "meeting_date_long": event["meeting_date_long"],
-        "venue": event["venue"],
-        "city_state": event["city_state"],
-        "attendance_expected": attendance or None,
-        "amount_currency": currency(final_total),
+    # Check if all required fields are filled
+    required_fields = {
+        "Event": event_choice if event_choice else None,
+        "Company": company_name,
+        "Document Type": st.session_state.document_type
     }
+
+    missing_fields = [field for field, value in required_fields.items() if not value or value.strip() == ""]
+
+    if missing_fields:
+        st.warning(f"⚠️ **Please complete:** {', '.join(missing_fields)}")
+        st.info("💡 **Tip:** All required fields must be completed before generating the document.")
+    else:
+        st.success("✅ **All required fields completed** - Ready to generate document!")
+
+    st.markdown("---")
+
+    # Generate button and downloads
+    button_text = "🚀 Generate LOA" if st.session_state.document_type == 'LOA' else "🚀 Generate Letter"
+    if st.button(button_text, use_container_width=True):
+        payload = {
+            "company_name": (company_name or "[Company]").strip(),
+            "meeting_name": event["meeting_name"],
+            "meeting_date_long": event["meeting_date_long"],
+            "venue": event["venue"],
+            "city_state": event["city_state"],
+            "attendance_expected": attendance or None,
+            "amount_currency": currency(final_total),
+        }
     
-    # Add LOA-specific fields if LOA is selected
-    if st.session_state.document_type == 'LOA':
-        # Get booth tier and price from booth_choice
-        booth_tier = booth_choice if booth_selected else None
+        # Add LOA-specific fields if LOA is selected
+        if st.session_state.document_type == 'LOA':
+            # Get booth tier and price from booth_choice
+            booth_tier = booth_choice if booth_selected else None
         booth_price = BOOTH_PRICES.get(booth_choice, 0) if booth_selected else 0
         
         payload.update({
