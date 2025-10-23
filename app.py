@@ -80,6 +80,17 @@ except Exception:
 
 # ---------------------- Configuration & Data ----------------------
 
+# ASCO Event Naming Toggle (2026)
+USE_BEST_OF_ASCO_NAMING = False  # Set to True when approved to use "Best of ASCO"
+
+def get_asco_event_name(base_name: str) -> str:
+    """Get ASCO event name based on naming toggle"""
+    # Use session state if available, otherwise use global variable
+    use_best_of = st.session_state.get('use_best_of_asco', USE_BEST_OF_ASCO_NAMING)
+    if use_best_of:
+        return base_name.replace("ASCO Direct", "Best of ASCO")
+    return base_name
+
 # Booth pricing
 BOOTH_PRICES = {
     "standard_1d": 5000,
@@ -207,39 +218,39 @@ EVENTS = [
     {"meeting_name": "2026 Cancer Updates GI and Lung, Denver, CO", "meeting_date_long": "March 12, 2026", "venue": "Denver Marriott Westminster", "city_state": "Denver, CO", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 ASCO Direct GU", "meeting_date_long": "March 14-15, 2026", "venue": "The Hyatt", "city_state": "Boston, MA", "default_tier": "standard_2d", "expected_attendance": 40},
     {"meeting_name": "2026 Cancer Updates GI and Breast, Houston", "meeting_date_long": "April 9, 2026", "venue": "The Blossom Hotel Houston", "city_state": "Houston, TX", "default_tier": "standard_1d", "expected_attendance": 30},
-    {"meeting_name": "2026 Pathways Conference", "meeting_date_long": "April 10-11, 2026", "venue": "Houston, TX", "city_state": "Houston, TX", "default_tier": "standard_2d"},
-    {"meeting_name": "2026 Oncology Clinical Updates - Review and Renew Sedona", "meeting_date_long": "April 11-12, 2026", "venue": "Sedona, AZ", "city_state": "Sedona, AZ", "default_tier": "standard_2d"},
-    {"meeting_name": "ESMO in Focus 2026: Lung Cancer and Sarcomas - With John Trent and Ravi Salgia", "meeting_date_long": "April 25, 2026", "venue": "Minneapolis, MN", "city_state": "Minneapolis, MN", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates Breast and Lung, Kansas City", "meeting_date_long": "May 14, 2026", "venue": "Kansas City, MO", "city_state": "Kansas City, MO", "default_tier": "standard_1d"},
+    {"meeting_name": "2026 Pathways Conference", "meeting_date_long": "September 25-26, 2026", "venue": "Hotel Zaza Houston", "city_state": "Houston, TX", "default_tier": "standard_2d"},
+    {"meeting_name": "2026 Oncology Clinical Updates - Review and Renew Sedona", "meeting_date_long": "April 11-12, 2026", "venue": "Hilton Sedona Resort at Bell Rock", "city_state": "Sedona, AZ", "default_tier": "standard_2d", "expected_attendance": 30},
+    {"meeting_name": "ESMO USA in Focus 2026: Lung Cancer and Sarcomas - With John Trent and Ravi Salgia", "meeting_date_long": "April 25, 2026", "venue": "Minneapolis Marriott City Center", "city_state": "Minneapolis, MN", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 Cancer Updates Breast and Lung, Kansas City", "meeting_date_long": "May 14, 2026", "venue": "Crossroads Hotel Kansas City", "city_state": "Kansas City, MO", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "ESMO in Focus 2026: Breast - EAST - With Reshma Mahtani and Kevin Kalinsky", "meeting_date_long": "May 16, 2026", "venue": "Baltimore, MD", "city_state": "Baltimore, MD", "default_tier": "standard_1d"},
     {"meeting_name": "ESMO in Focus 2026: Breast - WEST - With Hope Rugo and Sarah Tolaney", "meeting_date_long": "May 16, 2026", "venue": "Salt Lake City, UT", "city_state": "Salt Lake City, UT", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Best Of ASCO Puerto Rico", "meeting_date_long": "June 13-14, 2026", "venue": "Hyatt Regency Grand Reserve", "city_state": "San Juan, PR", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Austin", "meeting_date_long": "June 13-14, 2026", "venue": "W Austin", "city_state": "Austin, TX", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Los Angeles", "meeting_date_long": "June 13-14, 2026", "venue": "Le Meridien", "city_state": "Los Angeles, CA", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Hawaii", "meeting_date_long": "June 27-28, 2026", "venue": "Sheraton Waikiki Beach Resort", "city_state": "Honolulu, HI", "default_tier": "standard_2d", "expected_attendance": 100},
-    {"meeting_name": "2026 Best Of ASCO Washington DC", "meeting_date_long": "June 27-28, 2026", "venue": "Four Seasons Hotel Washington", "city_state": "Washington DC", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Denver", "meeting_date_long": "June 27-28, 2026", "venue": "Denver Marriott Westminster", "city_state": "Denver, CO", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Cancer Updates Heme and Breast, Michigan", "meeting_date_long": "July 9, 2026", "venue": "Ann Arbor, MI", "city_state": "Ann Arbor, MI", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 ASCO Direct New Orleans", "meeting_date_long": "July 10-11, 2026", "venue": "New Orleans, LA", "city_state": "New Orleans, LA", "default_tier": "standard_2d"},
-    {"meeting_name": "2026 ASCO Direct Charlotte", "meeting_date_long": "July 18-19, 2026", "venue": "Grand Bohemian", "city_state": "Charlotte, NC", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Philadelphia", "meeting_date_long": "July 18-19, 2026", "venue": "Rittenhouse", "city_state": "Philadelphia, PA", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Anchorage", "meeting_date_long": "July 18-19, 2026", "venue": "Anchorage Marriott Downtown", "city_state": "Anchorage, AK", "default_tier": "standard_2d", "expected_attendance": 30},
-    {"meeting_name": "2026 ASCO Direct Las Vegas", "meeting_date_long": "July 25-26, 2026", "venue": "Westin Lake Las Vegas", "city_state": "Henderson/Las Vegas, NV", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Best Of ASCO Indianapolis", "meeting_date_long": "July 25-26, 2026", "venue": "Indianapolis Marriott Downtown", "city_state": "Indianapolis, IN", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Minneapolis", "meeting_date_long": "August 1-2, 2026", "venue": "Four Seasons Minneapolis", "city_state": "Minneapolis, MN", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Maine", "meeting_date_long": "August 1-2, 2026", "venue": "TBD", "city_state": "Portland, ME", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 ASCO Direct Boston", "meeting_date_long": "August 8-9, 2026", "venue": "Ritz Carlton Boston", "city_state": "Boston, MA", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 ASCO Direct Seattle", "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Motif Seattle", "city_state": "Seattle, WA", "default_tier": "standard_2d", "expected_attendance": 50},
-    {"meeting_name": "2026 Best Of ASCO Memphis", "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Memphis", "city_state": "Memphis, TN", "default_tier": "standard_2d", "expected_attendance": 60},
-    {"meeting_name": "2026 Cancer Update GU and Lung, Princeton, NJ", "meeting_date_long": "August 13, 2026", "venue": "Princeton, NJ", "city_state": "Princeton, NJ", "default_tier": "standard_1d"},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Puerto Rico"), "meeting_date_long": "June 13-14, 2026", "venue": "Hyatt Regency Grand Reserve", "city_state": "San Juan, PR", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Austin"), "meeting_date_long": "June 13-14, 2026", "venue": "W Austin", "city_state": "Austin, TX", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Los Angeles"), "meeting_date_long": "June 13-14, 2026", "venue": "Le Meridien", "city_state": "Los Angeles, CA", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Hawaii"), "meeting_date_long": "June 27-28, 2026", "venue": "Sheraton Waikiki Beach Resort", "city_state": "Honolulu, HI", "default_tier": "standard_2d", "expected_attendance": 100},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Washington DC"), "meeting_date_long": "June 27-28, 2026", "venue": "Four Seasons Hotel Washington", "city_state": "Washington DC", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Denver"), "meeting_date_long": "June 27-28, 2026", "venue": "Denver Marriott Westminster", "city_state": "Denver, CO", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": "2026 Cancer Updates Heme and Breast, Michigan", "meeting_date_long": "July 9, 2026", "venue": "The Vanguard Ann Arbor, Autograph Collection", "city_state": "Ann Arbor, MI", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct New Orleans"), "meeting_date_long": "July 10-11, 2026", "venue": "Hyatt Regency NOLA", "city_state": "New Orleans, LA", "default_tier": "standard_2d", "expected_attendance": 30},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Charlotte"), "meeting_date_long": "July 18-19, 2026", "venue": "Grand Bohemian", "city_state": "Charlotte, NC", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Philadelphia"), "meeting_date_long": "July 18-19, 2026", "venue": "Rittenhouse", "city_state": "Philadelphia, PA", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Anchorage"), "meeting_date_long": "July 18-19, 2026", "venue": "Anchorage Marriott Downtown", "city_state": "Anchorage, AK", "default_tier": "standard_2d", "expected_attendance": 30},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Las Vegas"), "meeting_date_long": "July 25-26, 2026", "venue": "Westin Lake Las Vegas", "city_state": "Henderson/Las Vegas, NV", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Indianapolis"), "meeting_date_long": "July 25-26, 2026", "venue": "Indianapolis Marriott Downtown", "city_state": "Indianapolis, IN", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Minneapolis"), "meeting_date_long": "August 1-2, 2026", "venue": "Four Seasons Minneapolis", "city_state": "Minneapolis, MN", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Maine"), "meeting_date_long": "August 1-2, 2026", "venue": "TBD", "city_state": "Portland, ME", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Boston"), "meeting_date_long": "August 8-9, 2026", "venue": "Ritz Carlton Boston", "city_state": "Boston, MA", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Seattle"), "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Motif Seattle", "city_state": "Seattle, WA", "default_tier": "standard_2d", "expected_attendance": 50},
+    {"meeting_name": get_asco_event_name("2026 ASCO Direct Memphis"), "meeting_date_long": "August 8-9, 2026", "venue": "Hilton Memphis", "city_state": "Memphis, TN", "default_tier": "standard_2d", "expected_attendance": 60},
+    {"meeting_name": "2026 Cancer Update GU and Lung, Princeton, NJ", "meeting_date_long": "August 13, 2026", "venue": "Princeton Marriott at Forrestal", "city_state": "Princeton, NJ", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 Oncology Clinical Updates - Review and Renew Martha's Vineyard", "meeting_date_long": "August 15-16, 2026", "venue": "Martha's Vineyard, MA", "city_state": "Martha's Vineyard, MA", "default_tier": "standard_2d"},
-    {"meeting_name": "2026 Cancer Updates GU and Heme, Houston, TX", "meeting_date_long": "September 10, 2026", "venue": "Houston, TX", "city_state": "Houston, TX", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 MDONS Conference", "meeting_date_long": "September 18, 2026", "venue": "Denver, CO", "city_state": "Denver, CO", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates Lung and Breast, Dallas, TX", "meeting_date_long": "September 24, 2026", "venue": "Dallas, TX", "city_state": "Dallas, TX", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates GU and Lung, Philadelphia, PA", "meeting_date_long": "September 24, 2026", "venue": "Philadelphia, PA", "city_state": "Philadelphia, PA", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Astera Cancer Care Annual Retreat", "meeting_date_long": "September 26, 2026", "venue": "Long Branch, NJ", "city_state": "Long Branch, NJ", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 Cancer Updates GI and Breast, Boston, MA", "meeting_date_long": "October 1, 2026", "venue": "Boston, MA", "city_state": "Boston, MA", "default_tier": "standard_1d"},
-    {"meeting_name": "2026 West Oncology APP Dinner", "meeting_date_long": "October 8, 2026", "venue": "Memphis, TN", "city_state": "Memphis, TN", "default_tier": "standard_1d"},
+    {"meeting_name": "2026 Cancer Updates GU and Heme, Houston, TX", "meeting_date_long": "September 10, 2026", "venue": "The Blossom Hotel Houston", "city_state": "Houston, TX", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 MDONS Conference", "meeting_date_long": "September 18, 2026", "venue": "The Westin Westminster", "city_state": "Denver, CO", "default_tier": "standard_1d", "expected_attendance": 200},
+    {"meeting_name": "2026 Cancer Updates Lung and Breast, Dallas, TX", "meeting_date_long": "September 24, 2026", "venue": "The Beeman Hotel", "city_state": "Dallas, TX", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 Cancer Updates GU and Lung, Philadelphia, PA", "meeting_date_long": "September 24, 2026", "venue": "Hilton Penn's Landing", "city_state": "Philadelphia, PA", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 Astera Cancer Care Annual Retreat", "meeting_date_long": "September 26, 2026", "venue": "Ocean Place Resort and Spa", "city_state": "Long Branch, NJ", "default_tier": "standard_1d"},
+    {"meeting_name": "2026 Cancer Updates GI and Breast, Boston, MA", "meeting_date_long": "October 1, 2026", "venue": "Battery Wharf Hotel Boston Waterfront", "city_state": "Boston, MA", "default_tier": "standard_1d", "expected_attendance": 30},
+    {"meeting_name": "2026 West Oncology APP Dinner", "meeting_date_long": "October 8, 2026", "venue": "Hilton Memphis", "city_state": "Memphis, TN", "default_tier": "standard_1d", "expected_attendance": 30},
     {"meeting_name": "2026 Virtual West Oncology APP", "meeting_date_long": "October 9, 2026", "venue": "Virtual", "city_state": "Virtual", "default_tier": "standard_1d"},
     {"meeting_name": "2026 Empower (Patient Meeting)", "meeting_date_long": "October 10, 2026", "venue": "Boca Raton, FL", "city_state": "Boca Raton, FL", "default_tier": "standard_1d"},
     {"meeting_name": "2026 Empower GI Conference", "meeting_date_long": "November 7, 2026", "venue": "Washington DC", "city_state": "Washington DC", "default_tier": "standard_1d"},
@@ -1534,6 +1545,29 @@ with st.container():
         st.success("✅ Selected: Letter of Request (LOR)")
     else:
         st.success("✅ Selected: Letter of Agreement (LOA)")
+    
+    # ASCO Event Naming Toggle (2026)
+    st.markdown('<div class="section-header">ASCO Event Naming (2026)</div>', unsafe_allow_html=True)
+    st.markdown("**Toggle between 'ASCO Direct' and 'Best of ASCO' naming for 2026 events:**")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🏷️ Use 'ASCO Direct' (Current)", use_container_width=True):
+            st.session_state.use_best_of_asco = False
+            st.rerun()
+    with col2:
+        if st.button("⭐ Use 'Best of ASCO' (When Approved)", use_container_width=True):
+            st.session_state.use_best_of_asco = True
+            st.rerun()
+    
+    # Show current naming convention
+    if 'use_best_of_asco' not in st.session_state:
+        st.session_state.use_best_of_asco = False
+    
+    if st.session_state.use_best_of_asco:
+        st.info("📝 **Current Naming:** 'Best of ASCO' events (Ready for approval)")
+    else:
+        st.info("📝 **Current Naming:** 'ASCO Direct' events (Current default)")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
