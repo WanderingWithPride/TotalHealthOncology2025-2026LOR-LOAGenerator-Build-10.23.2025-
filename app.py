@@ -1234,197 +1234,40 @@ st.markdown(f"""
     header {{visibility: hidden;}}
     
     /* Excel Bulk Section Styling */
-    .excel-bulk-section {{
-        background: linear-gradient(135deg, {TH_COLORS['primary']}15, {TH_COLORS['secondary']}15) !important;
-        padding: 1.5rem !important;
-        border-radius: 12px !important;
-        border: 2px solid {TH_COLORS['light_gray']} !important;
-        margin: 1rem 0 !important;
-    }}
     
     /* Override all dark elements in Excel bulk section */
-    .excel-bulk-section * {{
-        color: {TH_COLORS['primary']} !important;
-        background-color: transparent !important;
-    }}
     
-    .excel-bulk-section .stTextInput input {{
-        background: white !important;
-        border: 2px solid {TH_COLORS['light_gray']} !important;
-        border-radius: 8px !important;
-        color: {TH_COLORS['primary']} !important;
-    }}
     
-    .excel-bulk-section .stTextInput input:focus {{
-        border-color: {TH_COLORS['primary']} !important;
-        box-shadow: 0 0 0 2px {TH_COLORS['primary']}20 !important;
-    }}
     
-    .excel-bulk-section .stRadio {{
-        background: white !important;
-        border-radius: 8px !important;
-        padding: 1rem !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-    }}
     
-    .excel-bulk-section .stRadio * {{
-        color: {TH_COLORS['primary']} !important;
-        background: transparent !important;
-    }}
     
-    .excel-bulk-section .stFileUploader {{
-        background: white !important;
-        border: 2px dashed {TH_COLORS['primary']} !important;
-        border-radius: 8px !important;
-        padding: 2rem !important;
-    }}
     
-    .excel-bulk-section .stFileUploader * {{
-        color: {TH_COLORS['primary']} !important;
-        background: transparent !important;
-    }}
     
-    .excel-bulk-section .stFileUploader:hover {{
-        border-color: {TH_COLORS['secondary']} !important;
-        background: {TH_COLORS['light_gray']} !important;
-    }}
     
-    .excel-bulk-section .stButton button {{
-        background: {TH_COLORS['primary']} !important;
-        color: white !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 2rem !important;
-        font-weight: 600 !important;
-        border: none !important;
-    }}
     
-    .excel-bulk-section .stButton button:hover {{
-        background: {TH_COLORS['secondary']} !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-    }}
     
-    .excel-bulk-section .stSuccess {{
-        background: {TH_COLORS['primary']}10 !important;
-        border: 1px solid {TH_COLORS['primary']} !important;
-        border-radius: 8px !important;
-        color: {TH_COLORS['primary']} !important;
-    }}
     
-    .excel-bulk-section .stInfo {{
-        background: {TH_COLORS['accent']}10 !important;
-        border: 1px solid {TH_COLORS['accent']} !important;
-        border-radius: 8px !important;
-        color: {TH_COLORS['secondary']} !important;
-    }}
     
-    .excel-bulk-section .stError {{
-        background: #ffebee !important;
-        border: 1px solid #f44336 !important;
-        border-radius: 8px !important;
-        color: #d32f2f !important;
-    }}
     
-    .excel-bulk-section .stWarning {{
-        background: #fff3e0 !important;
-        border: 1px solid #ff9800 !important;
-        border-radius: 8px !important;
-        color: #f57c00 !important;
-    }}
     
-    .excel-bulk-section .stExpander {{
-        background: white !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-        border-radius: 8px !important;
-    }}
     
-    .excel-bulk-section .stExpander * {{
-        color: {TH_COLORS['primary']} !important;
-        background: transparent !important;
-    }}
     
-    .excel-bulk-section .stDataFrame {{
-        background: white !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-        border-radius: 8px !important;
-    }}
     
-    .excel-bulk-section .stDataFrame * {{
-        color: {TH_COLORS['primary']} !important;
-        background: transparent !important;
-    }}
     
-    .excel-bulk-section .stMetric {{
-        background: white !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-        border-radius: 8px !important;
-        padding: 1rem !important;
-    }}
     
-    .excel-bulk-section .stMetric * {{
-        color: {TH_COLORS['primary']} !important;
-        background: transparent !important;
-    }}
     
     /* Specific overrides for file uploader and dataframe */
-    .excel-bulk-section [data-testid="stFileUploader"] {{
-        background: white !important;
-        border: 2px dashed {TH_COLORS['primary']} !important;
-        border-radius: 8px !important;
-        padding: 2rem !important;
-    }}
     
-    .excel-bulk-section [data-testid="stFileUploader"] * {{
-        color: {TH_COLORS['primary']} !important;
-        background: transparent !important;
-    }}
     
-    .excel-bulk-section [data-testid="stFileUploader"] .uploadedFile {{
-        background: white !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-        color: {TH_COLORS['primary']} !important;
-    }}
     
-    .excel-bulk-section [data-testid="stDataFrame"] {{
-        background: white !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-        border-radius: 8px !important;
-    }}
     
-    .excel-bulk-section [data-testid="stDataFrame"] * {{
-        color: {TH_COLORS['primary']} !important;
-        background: white !important;
-    }}
     
-    .excel-bulk-section [data-testid="stDataFrame"] table {{
-        background: white !important;
-        color: {TH_COLORS['primary']} !important;
-    }}
     
-    .excel-bulk-section [data-testid="stDataFrame"] th {{
-        background: {TH_COLORS['light_gray']} !important;
-        color: {TH_COLORS['primary']} !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-    }}
     
-    .excel-bulk-section [data-testid="stDataFrame"] td {{
-        background: white !important;
-        color: {TH_COLORS['primary']} !important;
-        border: 1px solid {TH_COLORS['light_gray']} !important;
-    }}
     
     /* Override any Streamlit dark theme */
-    .excel-bulk-section .stApp {{
-        background: white !important;
-    }}
     
-    .excel-bulk-section .main {{
-        background: white !important;
-    }}
     
-    .excel-bulk-section .block-container {{
-        background: white !important;
-    }}
 </style>
 """, unsafe_allow_html=True)
 
