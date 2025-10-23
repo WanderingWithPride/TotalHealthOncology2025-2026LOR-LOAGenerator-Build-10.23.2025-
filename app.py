@@ -15,20 +15,48 @@ import streamlit as st
 
 # --- Password Protection ---
 def check_password():
-    """Returns `True` if the user entered the correct password."""
+    """Returns `True` if the user entered the correct password and it hasn't expired."""
+    from datetime import datetime, timedelta
+    
+    # Password expires 48 hours from now
+    password_expires = datetime.now() + timedelta(hours=48)
+    current_time = datetime.now()
+    
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if st.session_state["password"] == st.secrets["password"]:
+        entered_password = st.session_state["password"]
+        
+        # Check regular password first (from secrets)
+        if entered_password == st.secrets.get("password", ""):
             st.session_state["password_correct"] = True
+            st.session_state["password_expired"] = False
+            del st.session_state["password"]  # Don't store password.
+        # Check temporary password
+        elif entered_password == "Allison2025":
+            # Check if temporary password has expired
+            if current_time > password_expires:
+                st.session_state["password_correct"] = False
+                st.session_state["password_expired"] = True
+            else:
+                st.session_state["password_correct"] = True
+                st.session_state["password_expired"] = False
             del st.session_state["password"]  # Don't store password.
         else:
             st.session_state["password_correct"] = False
+            st.session_state["password_expired"] = False
 
     if "password_correct" not in st.session_state:
         # First run, show input for password.
         st.text_input(
             "Password", type="password", on_change=password_entered, key="password"
         )
+        return False
+    elif st.session_state.get("password_expired", False):
+        # Password expired
+        st.text_input(
+            "Password", type="password", on_change=password_entered, key="password"
+        )
+        st.error("⏰ Password has expired (48-hour limit reached)")
         return False
     elif not st.session_state["password_correct"]:
         # Password not correct, show input + error.
@@ -38,7 +66,7 @@ def check_password():
         st.error("😕 Password incorrect")
         return False
     else:
-        # Password correct.
+        # Password correct and not expired.
         return True
 
 if not check_password():
@@ -2257,6 +2285,7 @@ with st.container():
             total_revenue = sum([l.get('total_cost', 0) for l in letters])
             st.metric("Total Revenue", f"${total_revenue:,.2f}")
 
+with tab3:
     # ======================== EXCEL BULK GENERATION ========================
     st.markdown("### 📊 Excel Bulk Letter Generator")
     st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
