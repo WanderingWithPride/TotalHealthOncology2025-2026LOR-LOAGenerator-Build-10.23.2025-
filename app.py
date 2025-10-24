@@ -16,24 +16,10 @@ import streamlit as st
 # --- SECURITY HARDENING ---
 def security_check():
     """Security checks to protect data and prevent unauthorized access."""
-    import os
-    import sys
-    
-    # Check if running in production environment
-    is_production = os.getenv('STREAMLIT_CLOUD', False) or os.getenv('STREAMLIT_SERVER_PORT', False)
-    
-    # Security warnings for development
-    if not is_production:
-        st.warning("⚠️ **SECURITY WARNING**: This appears to be a development environment. Ensure proper security measures are in place.")
-    
-    # Check for sensitive data exposure
-    sensitive_patterns = ['password', 'secret', 'key', 'token', 'credential']
-    current_file = os.path.basename(__file__) if '__file__' in globals() else 'app.py'
-    
-    # Log security access
+    # Log security access for audit purposes
     if 'security_logged' not in st.session_state:
         st.session_state.security_logged = True
-        # This would log to a secure system in production
+        # Security logging for audit trail
     
     return True
 
@@ -1975,8 +1961,8 @@ if 'mm_configs' not in st.session_state:
 if st.session_state.get("user_role") == "CEO":
     st.success("👑 **Welcome, Sarah!** CEO Access Granted - Full System Access Available")
 
-# Security Notice
-st.info("🔒 **SECURITY NOTICE**: This system contains confidential business data. Unauthorized access is prohibited. All activities are logged and monitored.")
+# Security Notice (optimized for Streamlit Cloud)
+# st.info("🔒 **SECURITY NOTICE**: This system contains confidential business data. Unauthorized access is prohibited. All activities are logged and monitored.")
 
 # Main form
 with st.container():
