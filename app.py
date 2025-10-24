@@ -809,6 +809,224 @@ def get_upcoming_events() -> List[Dict]:
     all_events.sort(key=lambda x: parse_event_date(x["meeting_date_long"]))
     return all_events
 
+# ======================== MULTI-MEETING FUNCTIONS ========================
+
+def generate_mm_document(selected_events: List[Dict], company_name: str, attendance: int, document_type: str):
+    """Generate Multi-Meeting document for all selected events"""
+    
+    # Calculate total package value
+    total_booth_cost = 0
+    total_addon_cost = 0
+    all_add_ons = []
+    
+    for event in selected_events:
+        event_key = event['meeting_name']
+        config = st.session_state.mm_configs.get(event_key, {})
+        
+        booth_choice = config.get('booth_choice', '(no booth)')
+        add_ons = config.get('add_ons', [])
+        
+        if booth_choice != "(no booth)":
+            total_booth_cost += BOOTH_PRICES[booth_choice]
+        
+        for addon in add_ons:
+            event_year = get_event_year(event['meeting_name'])
+            add_ons_pricing = get_add_ons_pricing(event_year)
+            total_addon_cost += add_ons_pricing[addon]['price']
+            all_add_ons.append(addon)
+    
+    final_total = total_booth_cost + total_addon_cost
+    
+    # Create MM-specific payload
+    payload = {
+        "company_name": (company_name or "[Company]").strip(),
+        "meeting_name": f"Multi-Meeting Package ({len(selected_events)} events)",
+        "meeting_date_long": f"Various dates in {get_event_year(selected_events[0]['meeting_name'])}",
+        "venue": "Multiple venues",
+        "city_state": "Various locations",
+        "attendance_expected": attendance or None,
+        "amount_currency": currency(final_total),
+        "mm_events": selected_events,
+        "mm_configs": st.session_state.mm_configs,
+        "total_booth_cost": total_booth_cost,
+        "total_addon_cost": total_addon_cost,
+    }
+    
+    # Add LOA-specific fields if LOA is selected
+    if document_type == 'LOA':
+        payload.update({
+            "company_address": st.session_state.get("company_address", "[Address]"),
+            "agreement_date": st.session_state.get("agreement_date", dt.date.today().strftime("%B %d, %Y")),
+            "signature_person": st.session_state.get("signature_person", "Sarah Louden - Founder and Executive Director, Total Health Conferencing"),
+            "additional_info": st.session_state.get("additional_info_text", "")
+        })
+    
+    # Generate paragraphs based on document type
+    if document_type == 'LOA':
+        paragraphs = render_mm_loa_paragraphs(payload)
+    else:
+        paragraphs = render_mm_lor_paragraphs(payload)
+    
+    # Load logo and signature
+    logo_bytes = get_embedded_logo()
+    sig_bytes = get_embedded_signature()
+    
+    # Generate filename
+    safe_company = "".join(c for c in company_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    base_filename = f"{document_type}_MM_{safe_company}_{len(selected_events)}_Events_{dt.date.today().strftime('%Y%m%d')}"
+    
+    # Generate and provide downloads
+    if document_type == 'LOA':
+        docx_bytes = build_loa_docx_bytes(paragraphs, logo_bytes, sig_bytes)
+        pdf_bytes = build_loa_pdf_bytes(paragraphs, logo_bytes, sig_bytes)
+    else:
+        docx_bytes = build_docx_bytes(paragraphs, True, all_add_ons, logo_bytes, sig_bytes, st.session_state.get("additional_info_text", ""))
+        pdf_bytes = build_pdf_bytes(paragraphs, True, all_add_ons, logo_bytes, sig_bytes, st.session_state.get("additional_info_text", ""))
+    
+    # Display downloads
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.download_button(
+            f"📄 Download Multi-Meeting {document_type} (.docx)", 
+            data=docx_bytes,
+            file_name=base_filename + ".docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    
+    with col2:
+        st.download_button(
+            f"📄 Download Multi-Meeting {document_type} (.pdf)", 
+            data=pdf_bytes,
+            file_name=base_filename + ".pdf",
+            mime="application/pdf"
+        )
+    
+    # Show success message
+    st.success(f"🎉 **Multi-Meeting {document_type} Generated Successfully!**")
+    st.info(f"📊 **Package Summary:** {len(selected_events)} events, Total Value: {currency(final_total)}")
+
+def render_mm_lor_paragraphs(payload: Dict) -> List[str]:
+    """Generate Multi-Meeting LOR paragraphs"""
+    today_long = dt.date.today().strftime("%B %d, %Y")
+    audience = payload.get(
+        "audience_list",
+        "physicians, nurses, pharmacists, advanced practitioners and patient advocates",
+    )
+    attendance_expected = payload.get("attendance_expected")
+    selected_events = payload.get("mm_events", [])
+    
+    paras = []
+    paras.append("Letter of Request - Multi-Meeting Package")
+    paras.append(today_long)
+    paras.append("Dear Exhibitor,")
+    
+    # Multi-meeting specific opening
+    paras.append(
+        f"Total Health Conferencing is proud to submit this request to {payload['company_name']} for support of our comprehensive multi-meeting educational package. "
+        f"This package includes {len(selected_events)} high-quality educational events throughout {get_event_year(selected_events[0]['meeting_name'])}."
+    )
+    
+    # List all events
+    paras.append("**EVENTS INCLUDED IN THIS PACKAGE:**")
+    for i, event in enumerate(selected_events, 1):
+        paras.append(f"{i}. {event['meeting_name']}")
+        paras.append(f"   📅 {event['meeting_date_long']} | 📍 {event['venue']}, {event['city_state']}")
+    
+    paras.append("")
+    paras.append(
+        f"These events will showcase clinical presentations, allowing attendees to engage in presentation, discussion, analysis, and participation."
+    )
+    
+    if attendance_expected:
+        paras.append(
+            f"Attendance numbers are expected, but not guaranteed. We expect {attendance_expected} total attendees across all events, including {audience}."
+        )
+    else:
+        paras.append(
+            f"Attendance numbers are expected, but not guaranteed. We expect a strong mix of {audience} across all events."
+        )
+    
+    paras.append(
+        f"Your support in the amount of {payload['amount_currency']} will provide you with an opportunity to support high-quality education across multiple events. "
+        f"Total Health Conferencing will provide you with the following benefits:"
+    )
+    
+    return paras
+
+def render_mm_loa_paragraphs(payload: Dict) -> List[str]:
+    """Generate Multi-Meeting LOA paragraphs"""
+    agreement_date = payload.get("agreement_date", dt.date.today().strftime("%B %d, %Y"))
+    company_name = payload.get("company_name", "[Company]")
+    company_address = payload.get("company_address", "[Address]")
+    selected_events = payload.get("mm_events", [])
+    amount = payload.get("amount_currency", "[Amount]")
+    
+    paras = []
+    paras.append("LETTER OF AGREEMENT (LOA) - MULTI-MEETING PACKAGE")
+    paras.append("")
+    paras.append(f"This Letter of Agreement (the \"Agreement\") is made as of {agreement_date} by and between Total Health Information Services, LLC. (\"Total Health\"), with its principal place of business at 20423 State Road 7, F6-496, Boca Raton FL 33498, and {company_name}(\"Sponsor\"), with its principal place of business at {company_address}. The individual signing this Agreement represents that they have the authority to legally bind the Sponsor to this Agreement.")
+    paras.append("")
+    paras.append("1. Purpose")
+    paras.append("")
+    paras.append("The purpose of this Agreement is to outline the terms under which the Sponsor agrees to participate in Total Health's educational events through a comprehensive multi-meeting sponsorship package, securing exhibit tables, product theaters, and other sponsorship-related opportunities across multiple events, as defined in the attached Scope of Work (SOW).")
+    paras.append("")
+    paras.append("2. Scope of Work (SOW)")
+    paras.append("")
+    paras.append("The SOW, attached as Exhibit A, details the services Total Health will provide educational related services across multiple events.")
+    paras.append("")
+    paras.append(f"Each sponsorship opportunity including name and date of meeting, city, and specific sponsor items will be specified in the SOW. This Agreement applies to all {len(selected_events)} events listed within the specified dates and covers all agreed-upon sponsorship activities.")
+    paras.append("")
+    paras.append("**SPECIFIC EVENT DETAILS:**")
+    for i, event in enumerate(selected_events, 1):
+        paras.append(f"• Event {i}: {event['meeting_name']}")
+        paras.append(f"  Date: {event['meeting_date_long']}")
+        paras.append(f"  Location: {event['venue']}, {event['city_state']}")
+        
+        # Add event-specific sponsorship details
+        event_key = event['meeting_name']
+        config = payload.get('mm_configs', {}).get(event_key, {})
+        booth_choice = config.get('booth_choice', '(no booth)')
+        add_ons = config.get('add_ons', [])
+        
+        if booth_choice != "(no booth)":
+            paras.append(f"  Booth: {booth_choice}")
+        if add_ons:
+            paras.append(f"  Add-ons: {', '.join(add_ons)}")
+        paras.append("")
+    
+    paras.append("3. Financial Terms")
+    paras.append("")
+    paras.append(f"The total sponsorship amount for this multi-meeting package is {amount}. Payment terms and schedule will be outlined in the SOW.")
+    paras.append("")
+    paras.append("4. Term and Termination")
+    paras.append("")
+    paras.append("This Agreement shall remain in effect for the duration of all specified events. Either party may terminate this Agreement with 30 days written notice.")
+    paras.append("")
+    paras.append("5. Signatures")
+    paras.append("")
+    paras.append("By signing below, the parties agree to the terms and conditions outlined in this Agreement.")
+    paras.append("")
+    paras.append("Total Health")
+    paras.append("")
+    paras.append("By: ____________________________")
+    signature_person = payload.get("signature_person", "Sarah Louden - Founder and Executive Director, Total Health Conferencing")
+    if ' - ' in signature_person:
+        name, title = signature_person.split(' - ', 1)
+        paras.append(f"Name: {name}")
+        paras.append(f"Title: {title}")
+    else:
+        paras.append(f"Name: {signature_person}")
+    paras.append("")
+    paras.append("Sponsor")
+    paras.append("")
+    paras.append("By: ____________________________")
+    paras.append(f"Name: {company_name}")
+    paras.append("Title: ____________________________")
+    paras.append("Date: ____________________________")
+    
+    return paras
+
 # ---------------------- DOCX Export Functions ----------------------
 
 def _docx_add_bullets(doc, items: List[str]):
@@ -1634,6 +1852,14 @@ if 'novartis_clicked' not in st.session_state:
 if 'additional_info_text' not in st.session_state:
     st.session_state.additional_info_text = ""
 
+# Multi-Meeting Mode session state
+if 'mm_mode' not in st.session_state:
+    st.session_state.mm_mode = False
+if 'selected_mm_events' not in st.session_state:
+    st.session_state.selected_mm_events = []
+if 'mm_configs' not in st.session_state:
+    st.session_state.mm_configs = {}
+
 # Main form
 with st.container():
     st.markdown('<div class="stContainer">', unsafe_allow_html=True)
@@ -1682,6 +1908,38 @@ with st.container():
     
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # Multi-Meeting Mode Toggle
+    st.markdown('<div class="section-header">Meeting Configuration</div>', unsafe_allow_html=True)
+    st.markdown("**Choose between single event or multi-meeting package:**")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🎯 Multi-Meeting Mode", use_container_width=True):
+            st.session_state.mm_mode = True
+            st.rerun()
+    with col2:
+        if st.button("📄 Single Event Mode", use_container_width=True):
+            st.session_state.mm_mode = False
+            st.rerun()
+    
+    # Show selected meeting mode
+    if st.session_state.mm_mode:
+        st.success("✅ Selected: Multi-Meeting Mode")
+        st.info("💡 **Multi-Meeting Mode:** Select multiple events with individual sponsorship configurations")
+    else:
+        st.success("✅ Selected: Single Event Mode")
+        st.info("💡 **Single Event Mode:** Select one event with standard sponsorship options")
+    
+    # Show combined selection summary
+    mm_mode = st.session_state.mm_mode
+    doc_type = st.session_state.document_type
+    if mm_mode:
+        st.info(f"🎯 **Current Selection:** Multi-Meeting {doc_type} Package")
+    else:
+        st.info(f"📄 **Current Selection:** Single Event {doc_type}")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # Event and company information
 with st.container():
     st.markdown('<div class="stContainer">', unsafe_allow_html=True)
@@ -1719,41 +1977,80 @@ with st.container():
             else:
                 st.success(f"📅 **Showing {total_upcoming} upcoming events** in chronological order")
         
-        # Event selection dropdown
+        # Event selection - Single or Multi based on MM Mode
         if filtered_events:
-            event_names = [e["meeting_name"] for e in filtered_events]
-            event_choice = st.selectbox("Select Event", event_names, key="event_select")
-            event = next(e for e in filtered_events if e["meeting_name"] == event_choice)
+            if st.session_state.mm_mode:
+                # Multi-Meeting Mode: Checkboxes
+                st.markdown("**🎯 Multi-Meeting Event Selection:**")
+                st.info("💡 **Select multiple events by checking the boxes below.**")
+                
+                selected_events = []
+                for event in filtered_events[:20]:  # Show first 20
+                    event_id = event["meeting_name"]
+                    is_selected = st.checkbox(
+                        f"{event['meeting_name']} - {event['meeting_date_long']}",
+                        key=f"mm_event_{event_id}",
+                        value=event_id in st.session_state.selected_mm_events
+                    )
+                    if is_selected:
+                        selected_events.append(event)
+                        if event_id not in st.session_state.selected_mm_events:
+                            st.session_state.selected_mm_events.append(event_id)
+                    elif event_id in st.session_state.selected_mm_events:
+                        st.session_state.selected_mm_events.remove(event_id)
+                
+                if selected_events:
+                    st.success(f"✅ **{len(selected_events)} events selected** for multi-meeting package")
+                    # Show package summary
+                    st.markdown("**📦 Multi-Meeting Package Summary:**")
+                    for event in selected_events:
+                        st.markdown(f"• {event['meeting_name']} - {event['meeting_date_long']}")
+                else:
+                    st.markdown("""
+                    <div style="background: #fff3cd; color: #664d03; border: 1px solid #ffe69c; border-radius: 8px; padding: 12px; margin: 8px 0;">
+                        ⚠️ <strong>Please select at least one event</strong> for your multi-meeting package
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                event_choice = None
+                event = None
+            else:
+                # Single Event Mode: Dropdown
+                event_names = [e["meeting_name"] for e in filtered_events]
+                event_choice = st.selectbox("Select Event", event_names, key="event_select")
+                event = next(e for e in filtered_events if e["meeting_name"] == event_choice)
+                selected_events = [event] if event else []
+                
+                # Show selected event with more details
+                if event_choice and event:
+                    st.info(f"📅 **Selected Event:** {event_choice}")
+                    st.caption(f"📍 **Location:** {event['venue']}, {event['city_state']}")
+                    st.caption(f"📅 **Date:** {event['meeting_date_long']}")
+                    
+                    # Check if this is a past event and warn user
+                    try:
+                        event_date = parse_event_date(event['meeting_date_long'])
+                        today = datetime.now()
+                        if event_date < today:
+                            st.warning("⚠️ **PAST EVENT WARNING:** This event has already occurred. You can still generate letters for past events if needed.")
+                    except:
+                        pass  # If date parsing fails, don't show warning
+                    
+                    # Show event type and compliance info
+                    event_year = get_event_year(event_choice)
+                    if "ASCO" in event_choice or "ESMO" in event_choice:
+                        st.caption("🏥 **Event Type:** CME-Accredited Educational Event")
+                    elif "Best of" in event_choice:
+                        st.caption("🏥 **Event Type:** Premium Educational Conference")
+                    else:
+                        st.caption("🏥 **Event Type:** Educational Conference")
+                else:
+                    st.warning("⚠️ **Please select an event** to continue")
         else:
             st.error("❌ **No events available** - Please try a different search or contact support.")
             event_choice = None
             event = None
-        
-        # Show selected event with more details
-        if event_choice and event:
-            st.info(f"📅 **Selected Event:** {event_choice}")
-            st.caption(f"📍 **Location:** {event['venue']}, {event['city_state']}")
-            st.caption(f"📅 **Date:** {event['meeting_date_long']}")
-            
-            # Check if this is a past event and warn user
-            try:
-                event_date = parse_event_date(event['meeting_date_long'])
-                today = datetime.now()
-                if event_date < today:
-                    st.warning("⚠️ **PAST EVENT WARNING:** This event has already occurred. You can still generate letters for past events if needed.")
-            except:
-                pass  # If date parsing fails, don't show warning
-            
-            # Show event type and compliance info
-            event_year = get_event_year(event_choice)
-            if "ASCO" in event_choice or "ESMO" in event_choice:
-                st.caption("🏥 **Event Type:** CME-Accredited Educational Event")
-            elif "Best of" in event_choice:
-                st.caption("🏥 **Event Type:** Premium Educational Conference")
-            else:
-                st.caption("🏥 **Event Type:** Educational Conference")
-        else:
-            st.warning("⚠️ **Please select an event** to continue")
+            selected_events = []
         
         # Company information
         st.markdown("**Company Information:**")
@@ -2094,114 +2391,144 @@ with st.container():
     st.markdown("---")
 
     # Generate button and downloads
-    button_text = "🚀 Generate LOA" if st.session_state.document_type == 'LOA' else "🚀 Generate Letter"
-    if st.button(button_text, use_container_width=True):
-        payload = {
-            "company_name": (company_name or "[Company]").strip(),
-            "meeting_name": event["meeting_name"],
-            "meeting_date_long": event["meeting_date_long"],
-            "venue": event["venue"],
-            "city_state": event["city_state"],
-            "attendance_expected": attendance or None,
-            "amount_currency": currency(final_total),
-        }
+    if st.session_state.mm_mode and selected_events:
+        button_text = f"🚀 Generate Multi-Meeting {st.session_state.document_type}"
+    else:
+        button_text = "🚀 Generate LOA" if st.session_state.document_type == 'LOA' else "🚀 Generate Letter"
     
-        # Add LOA-specific fields if LOA is selected
-        if st.session_state.document_type == 'LOA':
-            # Get booth tier and price from booth_choice
-            booth_tier = booth_choice if booth_selected else None
-            booth_price = BOOTH_PRICES.get(booth_choice, 0) if booth_selected else 0
-            
-            payload.update({
-                "company_address": st.session_state.get("company_address", "[Address]"),
-                "agreement_date": st.session_state.get("agreement_date", dt.date.today().strftime("%B %d, %Y")),
-                "signature_person": st.session_state.get("signature_person", "Sarah Louden - Founder and Executive Director, Total Health Conferencing"),
-                "booth_tier": booth_tier,
-                "booth_price": currency(booth_price) if booth_selected else None,
-                "additional_info": company_required_text
-            })
-        
-        if st.session_state.document_type == 'LOA':
-            paragraphs = render_loa_paragraphs(payload, booth_selected, add_on_keys, add_ons_pricing)
+    if st.button(button_text, use_container_width=True):
+        # Validation
+        if not company_name:
+            st.error("❌ Please fill in company name.")
+        elif st.session_state.mm_mode and not selected_events:
+            st.error("❌ Please select at least one event for multi-meeting package.")
+        elif not st.session_state.mm_mode and not event_choice:
+            st.error("❌ Please select an event.")
         else:
-            paragraphs = render_letter_paragraphs(payload, st.session_state.document_type)
-        
-        # Preview
-        preview_lines = "\n".join(paragraphs) + "\n\n"
-        if booth_selected:
-            preview_lines += "Exhibit Booth\n"
-            preview_lines += "\n".join([f"• {b}" for b in booth_bullets()]) + "\n\n"
-        if add_on_keys:
-            preview_lines += "Selected Add-Ons\n"
-            for k in add_on_keys:
-                preview_lines += f"{add_ons_pricing[k]['label']}\n"
-                preview_lines += "\n".join([f"• {b}" for b in ADD_ON_BULLETS.get(k, [])]) + "\n\n"
-        if company_required_text:
-            lead_in, bullets = parse_additional_info(company_required_text)
-            preview_lines += "Additional Information\n"
-            if lead_in:
-                preview_lines += lead_in + "\n"
-            if bullets:
-                preview_lines += "\n".join([f"• {b}" for b in bullets]) + "\n"
-            preview_lines += "\n"
-        preview_lines += "Grateful for your support,\n\n"
-        preview_lines += f"{SARAH['name']}\n{SARAH['title']}\n{SARAH['email']}\n{SARAH['phone']}"
-        
-        st.text_area("📄 Document Preview", preview_lines, height=400)
-        
-        base_filename = f"{st.session_state.document_type}_{(company_name or 'Company').replace(' ', '_')}_{event['meeting_name'].replace(' ', '_')}"
-        
-        logo_bytes = logo_bytes_default
-        sig_bytes = sig_bytes_default
-        
-        # DOCX Download
-        if st.session_state.document_type == 'LOA':
-            docx_bytes = build_loa_docx_bytes(paragraphs, logo_bytes, sig_bytes)
-            st.download_button(
-                "📄 Download LOA (.docx)", 
-                data=docx_bytes,
-                file_name=base_filename + ".docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
-            )
-        else:
-            docx_bytes = build_docx_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
-            st.download_button(
-                "📄 Download Letter (.docx)", 
-                data=docx_bytes,
-                file_name=base_filename + ".docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
-            )
-        
-        # PDF Download
-        if st.session_state.document_type == 'LOA':
-            pdf_bytes = build_loa_pdf_bytes(paragraphs, logo_bytes, sig_bytes)
-            st.download_button(
-                "📄 Download LOA (.pdf)", 
-                data=pdf_bytes,
-                file_name=base_filename + ".pdf",
-                mime="application/pdf" if PDF_AVAILABLE else "text/plain"
-            )
-        else:
-            pdf_bytes = build_pdf_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
-            st.download_button(
-                "📄 Download Letter (.pdf)", 
-                data=pdf_bytes,
-                file_name=base_filename + ".pdf",
-                mime="application/pdf" if PDF_AVAILABLE else "text/plain"
-            )
-        
-        # Log the letter generation
-        log_letter_generation(
-            company_name=company_name or "[Company]",
-            meeting_name=event["meeting_name"],
-            document_type=st.session_state.document_type,
-            booth_selected=booth_choice if booth_selected else None,
-            add_ons=add_on_keys,
-            total_cost=final_total,
-            additional_info=company_required_text
-        )
-        
-        st.success(f"✅ **{st.session_state.document_type} generated successfully!** Letter logged for tracking.")
+            if st.session_state.mm_mode and selected_events:
+                # Multi-Meeting Mode: Generate document for all selected events
+                generate_mm_document(selected_events, company_name, attendance, st.session_state.document_type)
+                
+                # Log the multi-meeting package
+                log_letter_generation(
+                    company_name=company_name or "[Company]",
+                    meeting_name=f"Multi-Meeting Package ({len(selected_events)} events)",
+                    document_type=st.session_state.document_type,
+                    booth_selected=booth_choice if booth_selected else None,
+                    add_ons=add_on_keys,
+                    total_cost=final_total,
+                    additional_info=company_required_text,
+                    mode="multi-meeting",
+                    num_events=len(selected_events)
+                )
+            else:
+                # Single Event Mode: Original logic
+                payload = {
+                    "company_name": (company_name or "[Company]").strip(),
+                    "meeting_name": event["meeting_name"],
+                    "meeting_date_long": event["meeting_date_long"],
+                    "venue": event["venue"],
+                    "city_state": event["city_state"],
+                    "attendance_expected": attendance or None,
+                    "amount_currency": currency(final_total),
+                }
+                
+                # Add LOA-specific fields if LOA is selected
+                if st.session_state.document_type == 'LOA':
+                    # Get booth tier and price from booth_choice
+                    booth_tier = booth_choice if booth_selected else None
+                    booth_price = BOOTH_PRICES.get(booth_choice, 0) if booth_selected else 0
+                    
+                    payload.update({
+                        "company_address": st.session_state.get("company_address", "[Address]"),
+                        "agreement_date": st.session_state.get("agreement_date", dt.date.today().strftime("%B %d, %Y")),
+                        "signature_person": st.session_state.get("signature_person", "Sarah Louden - Founder and Executive Director, Total Health Conferencing"),
+                        "booth_tier": booth_tier,
+                        "booth_price": currency(booth_price) if booth_selected else None,
+                        "additional_info": company_required_text
+                    })
+                
+                if st.session_state.document_type == 'LOA':
+                    paragraphs = render_loa_paragraphs(payload, booth_selected, add_on_keys, add_ons_pricing)
+                else:
+                    paragraphs = render_letter_paragraphs(payload, st.session_state.document_type)
+                
+                # Preview
+                preview_lines = "\n".join(paragraphs) + "\n\n"
+                if booth_selected:
+                    preview_lines += "Exhibit Booth\n"
+                    preview_lines += "\n".join([f"• {b}" for b in booth_bullets()]) + "\n\n"
+                if add_on_keys:
+                    preview_lines += "Selected Add-Ons\n"
+                    for k in add_on_keys:
+                        preview_lines += f"{add_ons_pricing[k]['label']}\n"
+                        preview_lines += "\n".join([f"• {b}" for b in ADD_ON_BULLETS.get(k, [])]) + "\n\n"
+                if company_required_text:
+                    lead_in, bullets = parse_additional_info(company_required_text)
+                    preview_lines += "Additional Information\n"
+                    if lead_in:
+                        preview_lines += lead_in + "\n"
+                    if bullets:
+                        preview_lines += "\n".join([f"• {b}" for b in bullets]) + "\n"
+                    preview_lines += "\n"
+                preview_lines += "Grateful for your support,\n\n"
+                preview_lines += f"{SARAH['name']}\n{SARAH['title']}\n{SARAH['email']}\n{SARAH['phone']}"
+                
+                st.text_area("📄 Document Preview", preview_lines, height=400)
+                
+                base_filename = f"{st.session_state.document_type}_{(company_name or 'Company').replace(' ', '_')}_{event['meeting_name'].replace(' ', '_')}"
+                
+                logo_bytes = logo_bytes_default
+                sig_bytes = sig_bytes_default
+                
+                # DOCX Download
+                if st.session_state.document_type == 'LOA':
+                    docx_bytes = build_loa_docx_bytes(paragraphs, logo_bytes, sig_bytes)
+                    st.download_button(
+                        "📄 Download LOA (.docx)", 
+                        data=docx_bytes,
+                        file_name=base_filename + ".docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
+                    )
+                else:
+                    docx_bytes = build_docx_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
+                    st.download_button(
+                        "📄 Download Letter (.docx)", 
+                        data=docx_bytes,
+                        file_name=base_filename + ".docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if DOCX_AVAILABLE else "text/plain"
+                    )
+                
+                # PDF Download
+                if st.session_state.document_type == 'LOA':
+                    pdf_bytes = build_loa_pdf_bytes(paragraphs, logo_bytes, sig_bytes)
+                    st.download_button(
+                        "📄 Download LOA (.pdf)", 
+                        data=pdf_bytes,
+                        file_name=base_filename + ".pdf",
+                        mime="application/pdf" if PDF_AVAILABLE else "text/plain"
+                    )
+                else:
+                    pdf_bytes = build_pdf_bytes(paragraphs, booth_selected, add_on_keys, logo_bytes, sig_bytes, company_required_text)
+                    st.download_button(
+                        "📄 Download Letter (.pdf)", 
+                        data=pdf_bytes,
+                        file_name=base_filename + ".pdf",
+                        mime="application/pdf" if PDF_AVAILABLE else "text/plain"
+                    )
+                
+                # Log the letter generation
+                log_letter_generation(
+                    company_name=company_name or "[Company]",
+                    meeting_name=event["meeting_name"],
+                    document_type=st.session_state.document_type,
+                    booth_selected=booth_choice if booth_selected else None,
+                    add_ons=add_on_keys,
+                    total_cost=final_total,
+                    additional_info=company_required_text
+                )
+                
+                st.success(f"✅ **{st.session_state.document_type} generated successfully!** Letter logged for tracking.")
 
 # ======================== EXCEL BULK GENERATION ========================
     st.markdown("### 📊 Letter Generation Log")
@@ -2285,6 +2612,7 @@ with st.container():
             total_revenue = sum([l.get('total_cost', 0) for l in letters])
             st.metric("Total Revenue", f"${total_revenue:,.2f}")
 
+with tab3:
     # ======================== EXCEL BULK GENERATION ========================
     st.markdown("### 📊 Excel Bulk Letter Generator")
     st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
@@ -2321,6 +2649,30 @@ with st.container():
         ```
         """)
 
+    # Multi-Meeting Mode Toggle for Excel Bulk
+    st.markdown("#### 🎯 Multi-Meeting Package Mode")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🎯 Multi-Meeting Excel Mode", use_container_width=True):
+            st.session_state.bulk_mm_mode = True
+            st.rerun()
+    with col2:
+        if st.button("📄 Single Event Excel Mode", use_container_width=True):
+            st.session_state.bulk_mm_mode = False
+            st.rerun()
+    
+    # Initialize bulk MM mode if not exists
+    if 'bulk_mm_mode' not in st.session_state:
+        st.session_state.bulk_mm_mode = False
+    
+    # Show selected bulk mode
+    if st.session_state.bulk_mm_mode:
+        st.success("✅ Selected: Multi-Meeting Excel Mode")
+        st.info("💡 **Multi-Meeting Excel Mode:** Generate packages for multiple events from Excel data")
+    else:
+        st.success("✅ Selected: Single Event Excel Mode")
+        st.info("💡 **Single Event Excel Mode:** Generate individual letters for each row in Excel")
+    
     # Company name input (applies to all letters)
     st.markdown("#### 🏢 Company Information")
     bulk_company_name = st.text_input(
@@ -2385,8 +2737,13 @@ if uploaded_file:
             st.success(f"✅ **All required columns found!**")
             st.info(f"📋 **Columns in your file:** {', '.join(df.columns.tolist())}")
             
-            # Generate button
-            if st.button(f"🚀 Generate {len(df)} {bulk_doc_type}s from Excel", use_container_width=True, key="bulk_generate_btn"):
+            # Generate button text based on mode
+            if st.session_state.bulk_mm_mode:
+                button_text = f"🚀 Generate Multi-Meeting Packages from Excel"
+            else:
+                button_text = f"🚀 Generate {len(df)} {bulk_doc_type}s from Excel"
+            
+            if st.button(button_text, use_container_width=True, key="bulk_generate_btn"):
                 
                 with st.spinner(f"Generating {len(df)} documents..."):
                     zip_buffer = BytesIO()
@@ -2482,36 +2839,100 @@ if uploaded_file:
                                 else:
                                     final_attendance = matching_event.get('expected_attendance', None)
                                 
-                                # Create payload
-                                payload = {
-                                    "company_name": company_name if company_name and company_name != 'nan' else "[Company Name]",
-                                    "meeting_name": matching_event["meeting_name"],
-                                    "meeting_date_long": date_str if date_str and date_str != 'nan' else matching_event["meeting_date_long"],
-                                    "venue": venue if venue and venue != 'nan' else matching_event["venue"],
-                                    "city_state": city if city and city != 'nan' else matching_event["city_state"],
-                                    "attendance_expected": final_attendance,
-                                    "amount_currency": currency(total),
-                                }
-                                
-                                # Generate paragraphs
-                                paragraphs = render_letter_paragraphs(payload, bulk_doc_type)
+                                if st.session_state.bulk_mm_mode:
+                                    # Multi-Meeting Mode: Group events by company and create packages
+                                    # For now, treat each row as a single event in a package
+                                    # This could be enhanced to group multiple rows by company
+                                    selected_events = [matching_event]
+                                    
+                                    # Create MM-specific payload
+                                    payload = {
+                                        "company_name": company_name if company_name and company_name != 'nan' else "[Company Name]",
+                                        "meeting_name": f"Multi-Meeting Package ({len(selected_events)} events)",
+                                        "meeting_date_long": f"Various dates in {get_event_year(selected_events[0]['meeting_name'])}",
+                                        "venue": "Multiple venues",
+                                        "city_state": "Various locations",
+                                        "attendance_expected": final_attendance,
+                                        "amount_currency": currency(total),
+                                        "mm_events": selected_events,
+                                        "mm_configs": {},
+                                        "total_booth_cost": 0,
+                                        "total_addon_cost": 0,
+                                    }
+                                    
+                                    # Generate MM paragraphs
+                                    if bulk_doc_type == 'LOA':
+                                        paragraphs = render_mm_loa_paragraphs(payload)
+                                    else:
+                                        paragraphs = render_mm_lor_paragraphs(payload)
+                                else:
+                                    # Single Event Mode: Original logic
+                                    payload = {
+                                        "company_name": company_name if company_name and company_name != 'nan' else "[Company Name]",
+                                        "meeting_name": matching_event["meeting_name"],
+                                        "meeting_date_long": date_str if date_str and date_str != 'nan' else matching_event["meeting_date_long"],
+                                        "venue": venue if venue and venue != 'nan' else matching_event["venue"],
+                                        "city_state": city if city and city != 'nan' else matching_event["city_state"],
+                                        "attendance_expected": final_attendance,
+                                        "amount_currency": currency(total),
+                                    }
+                                    
+                                    # Generate paragraphs
+                                    paragraphs = render_letter_paragraphs(payload, bulk_doc_type)
                                 
                                 # Load assets
                                 logo_bytes = get_embedded_logo()
                                 sig_bytes = get_embedded_signature()
                                 
-                                # Generate documents
-                                docx_bytes = build_docx_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
-                                pdf_bytes = build_pdf_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
+                                # Generate documents based on mode
+                                if st.session_state.bulk_mm_mode:
+                                    # Multi-Meeting Mode: Use MM document generation
+                                    if bulk_doc_type == 'LOA':
+                                        docx_bytes = build_loa_docx_bytes(paragraphs, logo_bytes, sig_bytes)
+                                        pdf_bytes = build_loa_pdf_bytes(paragraphs, logo_bytes, sig_bytes)
+                                    else:
+                                        docx_bytes = build_docx_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
+                                        pdf_bytes = build_pdf_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
+                                else:
+                                    # Single Event Mode: Original logic
+                                    docx_bytes = build_docx_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
+                                    pdf_bytes = build_pdf_bytes(paragraphs, True, [], logo_bytes, sig_bytes, "")
                                 
-                                # Clean filename
-                                safe_filename = "".join(c for c in exhibitor_invite if c.isalnum() or c in (' ', '-', '_')).rstrip()
-                                safe_filename = safe_filename.replace('  ', ' ').replace(' ', '_')[:80]
+                                # Clean filename based on mode
+                                if st.session_state.bulk_mm_mode:
+                                    safe_filename = f"MM_{bulk_doc_type}_{exhibitor_invite}".replace(' ', '_')[:80]
+                                else:
+                                    safe_filename = "".join(c for c in exhibitor_invite if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                                    safe_filename = safe_filename.replace('  ', ' ').replace(' ', '_')[:80]
                                 
                                 # Add to ZIP in organized folders
                                 zip_file.writestr(f"Word_Documents/{safe_filename}.docx", docx_bytes)
                                 zip_file.writestr(f"PDF_Documents/{safe_filename}.pdf", pdf_bytes)
                                 generated_count += 1
+                                
+                                # Log the letter generation
+                                if st.session_state.bulk_mm_mode:
+                                    log_letter_generation(
+                                        company_name=company_name if company_name and company_name != 'nan' else "[Company Name]",
+                                        meeting_name=f"Multi-Meeting Package ({len(selected_events)} events)",
+                                        document_type=bulk_doc_type,
+                                        booth_selected=None,
+                                        add_ons=[],
+                                        total_cost=total,
+                                        additional_info="",
+                                        mode="multi-meeting",
+                                        num_events=len(selected_events)
+                                    )
+                                else:
+                                    log_letter_generation(
+                                        company_name=company_name if company_name and company_name != 'nan' else "[Company Name]",
+                                        meeting_name=matching_event["meeting_name"],
+                                        document_type=bulk_doc_type,
+                                        booth_selected=None,
+                                        add_ons=[],
+                                        total_cost=total,
+                                        additional_info=""
+                                    )
                                 
                             except Exception as e:
                                 errors.append(f"Row {idx+2}: {str(e)}")
@@ -2524,13 +2945,24 @@ if uploaded_file:
                     if bulk_company_name and bulk_company_name.strip():
                         safe_company = "".join(c for c in bulk_company_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
                         safe_company = safe_company.replace('  ', ' ').replace(' ', '_')[:40]
-                        zip_filename = f"{bulk_doc_type}_{safe_company}_{len(df)}_Letters_{dt.date.today().strftime('%Y%m%d')}.zip"
+                        if st.session_state.bulk_mm_mode:
+                            zip_filename = f"MM_{bulk_doc_type}_{safe_company}_{len(df)}_Packages_{dt.date.today().strftime('%Y%m%d')}.zip"
+                        else:
+                            zip_filename = f"{bulk_doc_type}_{safe_company}_{len(df)}_Letters_{dt.date.today().strftime('%Y%m%d')}.zip"
                     else:
-                        zip_filename = f"{bulk_doc_type}_Excel_Bulk_{len(df)}_Letters_{dt.date.today().strftime('%Y%m%d')}.zip"
+                        if st.session_state.bulk_mm_mode:
+                            zip_filename = f"MM_{bulk_doc_type}_Excel_Bulk_{len(df)}_Packages_{dt.date.today().strftime('%Y%m%d')}.zip"
+                        else:
+                            zip_filename = f"{bulk_doc_type}_Excel_Bulk_{len(df)}_Letters_{dt.date.today().strftime('%Y%m%d')}.zip"
                     
                     # Download button
+                    if st.session_state.bulk_mm_mode:
+                        download_text = f"📦 Download ZIP with {generated_count} Multi-Meeting Packages"
+                    else:
+                        download_text = f"📦 Download ZIP with {generated_count} {bulk_doc_type}s"
+                    
                     st.download_button(
-                        f"📦 Download ZIP with {generated_count} {bulk_doc_type}s",
+                        download_text,
                         data=zip_buffer.getvalue(),
                         file_name=zip_filename,
                         mime="application/zip",
