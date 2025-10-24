@@ -2612,17 +2612,15 @@ with st.container():
             total_revenue = sum([l.get('total_cost', 0) for l in letters])
             st.metric("Total Revenue", f"${total_revenue:,.2f}")
 
-with tab3:
-    # ======================== EXCEL BULK GENERATION ========================
-    st.markdown("### 📊 Excel Bulk Letter Generator")
-    st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
+# ======================== EXCEL BULK GENERATION ========================
+st.markdown("### 📊 Excel Bulk Letter Generator")
+st.markdown("**Upload your exhibitor invite spreadsheet → Download ZIP with all letters**")
 
+# Excel bulk section - clean approach without CSS overrides
 
-    # Excel bulk section - clean approach without CSS overrides
-
-    # Instructions
-    with st.expander("📋 How To Use Excel Bulk Mode", expanded=False):
-        st.markdown("""
+# Instructions
+with st.expander("📋 How To Use Excel Bulk Mode", expanded=False):
+    st.markdown("""
         ### Step-by-Step Guide:
         
         1. **Prepare your Excel file** with these columns:
