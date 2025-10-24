@@ -1,5 +1,8 @@
 # LOR/LOA Generator - Streamlit Cloud Dependencies
-# Optimized for cloud deployment
+# Optimized for cloud deployment with security hardening
+
+# SECURITY: All dependencies are pinned to specific versions for security
+# Regular updates recommended to maintain security patches
 
 # Core application dependencies
 streamlit==1.50.0

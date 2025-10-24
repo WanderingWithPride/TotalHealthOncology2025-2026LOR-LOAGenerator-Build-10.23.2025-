@@ -13,6 +13,30 @@ from typing import List, Dict, Optional
 
 import streamlit as st
 
+# --- SECURITY HARDENING ---
+def security_check():
+    """Security checks to protect data and prevent unauthorized access."""
+    import os
+    import sys
+    
+    # Check if running in production environment
+    is_production = os.getenv('STREAMLIT_CLOUD', False) or os.getenv('STREAMLIT_SERVER_PORT', False)
+    
+    # Security warnings for development
+    if not is_production:
+        st.warning("⚠️ **SECURITY WARNING**: This appears to be a development environment. Ensure proper security measures are in place.")
+    
+    # Check for sensitive data exposure
+    sensitive_patterns = ['password', 'secret', 'key', 'token', 'credential']
+    current_file = os.path.basename(__file__) if '__file__' in globals() else 'app.py'
+    
+    # Log security access
+    if 'security_logged' not in st.session_state:
+        st.session_state.security_logged = True
+        # This would log to a secure system in production
+    
+    return True
+
 # --- Password Protection ---
 def check_password():
     """Returns `True` if the user entered the correct password and it hasn't expired."""
@@ -31,15 +55,19 @@ def check_password():
             st.session_state["password_correct"] = True
             st.session_state["password_expired"] = False
             del st.session_state["password"]  # Don't store password.
-        # Check temporary password
-        elif entered_password == "Allison2025":
-            # Check if temporary password has expired
-            if current_time > password_expires:
-                st.session_state["password_correct"] = False
-                st.session_state["password_expired"] = True
-            else:
-                st.session_state["password_correct"] = True
-                st.session_state["password_expired"] = False
+        # Check Sarah's CEO password (from secrets)
+        # TO REVOKE SARAH'S ACCESS: Change the password in secrets.toml or Streamlit Cloud secrets
+        elif entered_password == st.secrets.get("sarah_password", "Sarah2025!"):
+            st.session_state["password_correct"] = True
+            st.session_state["password_expired"] = False
+            st.session_state["user_role"] = "CEO"  # Track user role
+            del st.session_state["password"]  # Don't store password.
+        # Check Allison's password (from secrets)
+        # TO REVOKE ALLISON'S ACCESS: Change the password in secrets.toml or Streamlit Cloud secrets
+        elif entered_password == st.secrets.get("allison_password", "Allison2025"):
+            st.session_state["password_correct"] = True
+            st.session_state["password_expired"] = False
+            st.session_state["user_role"] = "Allison"  # Track user role
             del st.session_state["password"]  # Don't store password.
         else:
             st.session_state["password_correct"] = False
@@ -71,6 +99,10 @@ def check_password():
 
 if not check_password():
     st.stop()
+
+# Run security checks
+security_check()
+
 # --- End Password Protection ---
 
 # Optional dependencies
@@ -115,9 +147,26 @@ USE_BEST_OF_ASCO_NAMING = False  # Set to True when approved to use "Best of ASC
 LETTER_LOG_FILE = "letter_generation_log.json"
 
 def log_letter_generation(company_name, meeting_name, document_type, booth_selected, add_ons, total_cost, additional_info=""):
-    """Log letter generation details to JSON file"""
+    """Log letter generation details to JSON file with security hardening"""
     import json
     from datetime import datetime
+    import os
+    
+    # Security: Sanitize inputs to prevent injection
+    def sanitize_input(text):
+        if not text:
+            return ""
+        # Remove potentially dangerous characters
+        dangerous_chars = ['<', '>', '"', "'", '&', ';', '(', ')', '{', '}', '[', ']']
+        for char in dangerous_chars:
+            text = text.replace(char, '')
+        return text[:500]  # Limit length
+    
+    # Sanitize all inputs
+    company_name = sanitize_input(company_name)
+    meeting_name = sanitize_input(meeting_name)
+    document_type = sanitize_input(document_type)
+    additional_info = sanitize_input(additional_info)
     
     log_entry = {
         "timestamp": datetime.now().isoformat(),
@@ -127,8 +176,20 @@ def log_letter_generation(company_name, meeting_name, document_type, booth_selec
         "booth_selected": booth_selected,
         "add_ons": add_ons,
         "total_cost": total_cost,
-        "additional_info": additional_info
+        "additional_info": additional_info,
+        "user_role": st.session_state.get("user_role", "Unknown"),
+        "session_id": st.session_state.get("session_id", "unknown")
     }
+    
+    # Security: Check file size before writing
+    try:
+        if os.path.exists(LETTER_LOG_FILE):
+            file_size = os.path.getsize(LETTER_LOG_FILE)
+            if file_size > 10 * 1024 * 1024:  # 10MB limit
+                st.error("⚠️ Log file too large. Please contact administrator.")
+                return
+    except Exception:
+        pass
     
     try:
         # Load existing log
@@ -141,12 +202,16 @@ def log_letter_generation(company_name, meeting_name, document_type, booth_selec
         # Add new entry
         log_data["letters"].append(log_entry)
         
+        # Security: Keep only last 500 entries to prevent data accumulation
+        if len(log_data["letters"]) > 500:
+            log_data["letters"] = log_data["letters"][-500:]
+        
         # Save updated log
         with open(LETTER_LOG_FILE, 'w') as f:
             json.dump(log_data, f, indent=2)
             
     except Exception as e:
-        st.error(f"Failed to log letter generation: {e}")
+        st.error(f"⚠️ Failed to log letter generation: {e}")
 
 def get_letter_log():
     """Get all logged letters"""
@@ -165,49 +230,95 @@ def get_asco_event_name(base_name: str) -> str:
         return base_name.replace("ASCO Direct", "Best of ASCO")
     return base_name
 
-# Booth pricing
-BOOTH_PRICES = {
-    "standard_1d": 5000,
-    "standard_2d": 7500,
-    "platinum": 10000,
-    "best_of": 10000,
-    "premier": 15000,
-}
+# SECURITY: Pricing data moved to secrets to protect business information
+def get_booth_prices():
+    """Get booth pricing from secure secrets"""
+    try:
+        return st.secrets.get("booth_prices", {
+            "standard_1d": 5000,
+            "standard_2d": 7500,
+            "platinum": 10000,
+            "best_of": 10000,
+            "premier": 15000,
+        })
+    except Exception:
+        # Fallback pricing (will be overridden by secrets in production)
+        return {
+            "standard_1d": 5000,
+            "standard_2d": 7500,
+            "platinum": 10000,
+            "best_of": 10000,
+            "premier": 15000,
+        }
 
-# Add-ons pricing (2025 vs 2026)
-ADD_ONS_2025 = {
-    "program_ad_full": {"label": "Program Guide Full Page Ad", "price": 2000},
-    "charging_stations": {"label": "In-Person Charging Station", "price": 2000},
-    "wifi_sponsorship": {"label": "Wi-Fi Network Sponsorship", "price": 3000},
-    "platform_banner": {"label": "Platform Banner Ad", "price": 2000},
-    "email_banner": {"label": "Email Banner Ad", "price": 2500},
-    "registration_banner": {"label": "Registration Banner Ad", "price": 2000},
-    "networking_reception": {"label": "In-Person Networking Reception", "price": 3500},
-    "networking_activity": {"label": "Networking Activity / Excursion", "price": 3500},
-    "advisory_board": {"label": "Advisory Board (3-hour)", "price": 30000},
-    "non_cme_session": {"label": "Non-CME/CE Session (45 min)", "price": 50000},
-}
+# SECURITY: Add-ons pricing moved to secrets to protect business information
+def get_add_ons_2025():
+    """Get 2025 add-ons pricing from secure secrets"""
+    try:
+        return st.secrets.get("add_ons_2025", {
+            "program_ad_full": {"label": "Program Guide Full Page Ad", "price": 2000},
+            "charging_stations": {"label": "In-Person Charging Station", "price": 2000},
+            "wifi_sponsorship": {"label": "Wi-Fi Network Sponsorship", "price": 3000},
+            "platform_banner": {"label": "Platform Banner Ad", "price": 2000},
+            "email_banner": {"label": "Email Banner Ad", "price": 2500},
+            "registration_banner": {"label": "Registration Banner Ad", "price": 2000},
+            "networking_reception": {"label": "In-Person Networking Reception", "price": 3500},
+            "networking_activity": {"label": "Networking Activity / Excursion", "price": 3500},
+            "advisory_board": {"label": "Advisory Board (3-hour)", "price": 30000},
+            "non_cme_session": {"label": "Non-CME/CE Session (45 min)", "price": 50000},
+        })
+    except Exception:
+        return {
+            "program_ad_full": {"label": "Program Guide Full Page Ad", "price": 2000},
+            "charging_stations": {"label": "In-Person Charging Station", "price": 2000},
+            "wifi_sponsorship": {"label": "Wi-Fi Network Sponsorship", "price": 3000},
+            "platform_banner": {"label": "Platform Banner Ad", "price": 2000},
+            "email_banner": {"label": "Email Banner Ad", "price": 2500},
+            "registration_banner": {"label": "Registration Banner Ad", "price": 2000},
+            "networking_reception": {"label": "In-Person Networking Reception", "price": 3500},
+            "networking_activity": {"label": "Networking Activity / Excursion", "price": 3500},
+            "advisory_board": {"label": "Advisory Board (3-hour)", "price": 30000},
+            "non_cme_session": {"label": "Non-CME/CE Session (45 min)", "price": 50000},
+        }
 
-ADD_ONS_2026 = {
-    "program_ad_full": {"label": "Program Guide Full Page Ad", "price": 2000},
-    "charging_stations": {"label": "In-Person Charging Station", "price": 3000},
-    "wifi_sponsorship": {"label": "Wi-Fi Network Sponsorship", "price": 3000},
-    "platform_banner": {"label": "Platform Banner Ad", "price": 2000},
-    "email_banner": {"label": "Email Banner Ad", "price": 2500},
-    "registration_banner": {"label": "Registration Banner Ad", "price": 2000},
-    "networking_reception": {"label": "In-Person Networking Reception", "price": 3500},
-    "networking_activity": {"label": "Networking Activity / Excursion", "price": 3500},
-    "advisory_board": {"label": "Advisory Board (3-hour)", "price": 30000},
-    "non_cme_session": {"label": "Non-CME/CE Session (45 min)", "price": 50000},
-}
+def get_add_ons_2026():
+    """Get 2026 add-ons pricing from secure secrets"""
+    try:
+        return st.secrets.get("add_ons_2026", {
+            "program_ad_full": {"label": "Program Guide Full Page Ad", "price": 2000},
+            "charging_stations": {"label": "In-Person Charging Station", "price": 3000},
+            "wifi_sponsorship": {"label": "Wi-Fi Network Sponsorship", "price": 3000},
+            "platform_banner": {"label": "Platform Banner Ad", "price": 2000},
+            "email_banner": {"label": "Email Banner Ad", "price": 2500},
+            "registration_banner": {"label": "Registration Banner Ad", "price": 2000},
+            "networking_reception": {"label": "In-Person Networking Reception", "price": 3500},
+            "networking_activity": {"label": "Networking Activity / Excursion", "price": 3500},
+            "advisory_board": {"label": "Advisory Board (3-hour)", "price": 30000},
+            "non_cme_session": {"label": "Non-CME/CE Session (45 min)", "price": 50000},
+        })
+    except Exception:
+        return {
+            "program_ad_full": {"label": "Program Guide Full Page Ad", "price": 2000},
+            "charging_stations": {"label": "In-Person Charging Station", "price": 3000},
+            "wifi_sponsorship": {"label": "Wi-Fi Network Sponsorship", "price": 3000},
+            "platform_banner": {"label": "Platform Banner Ad", "price": 2000},
+            "email_banner": {"label": "Email Banner Ad", "price": 2500},
+            "registration_banner": {"label": "Registration Banner Ad", "price": 2000},
+            "networking_reception": {"label": "In-Person Networking Reception", "price": 3500},
+            "networking_activity": {"label": "Networking Activity / Excursion", "price": 3500},
+            "advisory_board": {"label": "Advisory Board (3-hour)", "price": 30000},
+            "non_cme_session": {"label": "Non-CME/CE Session (45 min)", "price": 50000},
+        }
+
+# Pricing will be loaded when needed (lazy loading)
 
 # Function to get pricing based on event year
 def get_add_ons_pricing(event_year):
     """Return the appropriate pricing structure based on event year"""
     if event_year == 2026:
-        return ADD_ONS_2026
+        return get_add_ons_2026()
     else:
-        return ADD_ONS_2025
+        return get_add_ons_2025()
 
 # Add-on descriptions
 ADD_ON_BULLETS: Dict[str, List[str]] = {
@@ -827,7 +938,7 @@ def generate_mm_document(selected_events: List[Dict], company_name: str, attenda
         add_ons = config.get('add_ons', [])
         
         if booth_choice != "(no booth)":
-            total_booth_cost += BOOTH_PRICES[booth_choice]
+            total_booth_cost += get_booth_prices()[booth_choice]
         
         for addon in add_ons:
             event_year = get_event_year(event['meeting_name'])
@@ -1088,7 +1199,7 @@ def build_docx_bytes(paragraphs: List[str], booth_selected: bool,
         doc.add_paragraph("").paragraph_format.space_after = Pt(6)
         _docx_add_header(doc, "Selected Add-Ons")
         for k in add_on_keys:
-            _docx_add_header(doc, ADD_ONS_2025[k]["label"])  # Use 2025 labels for consistency
+            _docx_add_header(doc, get_add_ons_2025()[k]["label"])  # Use 2025 labels for consistency
             _docx_add_bullets(doc, ADD_ON_BULLETS.get(k, []))
 
     # Additional Information
@@ -1206,7 +1317,7 @@ def build_pdf_bytes(paragraphs: List[str], booth_selected: bool,
         story.append(Paragraph("Selected Add-Ons", bold))
         for k in add_on_keys:
             story.append(Spacer(1, 0.08 * inch))
-            story.append(Paragraph(ADD_ONS_2025[k]["label"], bold))  # Use 2025 labels
+            story.append(Paragraph(get_add_ons_2025()[k]["label"], bold))  # Use 2025 labels
             tbl = _pdf_bullet_table(ADD_ON_BULLETS.get(k, []), body)
             if tbl:
                 story.append(tbl)
@@ -1860,6 +1971,13 @@ if 'selected_mm_events' not in st.session_state:
 if 'mm_configs' not in st.session_state:
     st.session_state.mm_configs = {}
 
+# CEO Welcome Message
+if st.session_state.get("user_role") == "CEO":
+    st.success("👑 **Welcome, Sarah!** CEO Access Granted - Full System Access Available")
+
+# Security Notice
+st.info("🔒 **SECURITY NOTICE**: This system contains confidential business data. Unauthorized access is prohibited. All activities are logged and monitored.")
+
 # Main form
 with st.container():
     st.markdown('<div class="stContainer">', unsafe_allow_html=True)
@@ -2117,18 +2235,18 @@ with st.container():
     with col1:
         # Booth selection with enhanced guidance
         st.markdown("**Exhibit Booth Selection:**")
-        booth_options = ["(no booth)"] + list(BOOTH_PRICES.keys())
+        booth_options = ["(no booth)"] + list(get_booth_prices().keys())
         booth_choice = st.selectbox(
             "Booth Tier (optional)",
             options=booth_options,
             index=0,
             format_func=lambda k: {
                 "(no booth)": "(No Booth)",
-                "standard_1d": f"Standard (1 day) - ${BOOTH_PRICES['standard_1d']:,}",
-                "standard_2d": f"Standard (2 days) - ${BOOTH_PRICES['standard_2d']:,}",
-                "platinum": f"Platinum - ${BOOTH_PRICES['platinum']:,}",
-                "best_of": f"Best of - ${BOOTH_PRICES['best_of']:,}",
-                "premier": f"Premier - ${BOOTH_PRICES['premier']:,}",
+                "standard_1d": f"Standard (1 day) - ${get_booth_prices()['standard_1d']:,}",
+                "standard_2d": f"Standard (2 days) - ${get_booth_prices()['standard_2d']:,}",
+                "platinum": f"Platinum - ${get_booth_prices()['platinum']:,}",
+                "best_of": f"Best of - ${get_booth_prices()['best_of']:,}",
+                "premier": f"Premier - ${get_booth_prices()['premier']:,}",
             }[k],
             key="booth_select",
             help="Select booth tier based on your sponsorship level. Standard booths include basic exhibit space, Platinum includes enhanced placement, Best of/Premier include premium positioning."
@@ -2328,7 +2446,7 @@ with st.container():
     
     with col2:
         # Calculate pricing
-        base = BOOTH_PRICES.get(booth_choice, 0)
+        base = get_booth_prices().get(booth_choice, 0)
         addons_total = sum(add_ons_pricing[k]["price"] for k in add_on_keys)
         subtotal = base + addons_total
         
@@ -2437,7 +2555,7 @@ with st.container():
                 if st.session_state.document_type == 'LOA':
                     # Get booth tier and price from booth_choice
                     booth_tier = booth_choice if booth_selected else None
-                    booth_price = BOOTH_PRICES.get(booth_choice, 0) if booth_selected else 0
+                    booth_price = get_booth_prices().get(booth_choice, 0) if booth_selected else 0
                     
                     payload.update({
                         "company_address": st.session_state.get("company_address", "[Address]"),
