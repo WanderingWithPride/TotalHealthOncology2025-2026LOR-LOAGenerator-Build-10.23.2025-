@@ -14,45 +14,31 @@ class DocumentPayload:
 
     Contains all information needed to generate an LOR or LOA
     """
-    # Company information
+    # Required fields (no defaults)
     company_name: str
-    company_address: Optional[str] = None
-
-    # Event information
     meeting_name: str
     meeting_date_long: str
     venue: str
     city_state: str
 
-    # Booth and pricing
+    # Optional fields (with defaults)
+    company_address: Optional[str] = None
     booth_selected: bool = False
     booth_tier: Optional[str] = None
     booth_price: Optional[float] = None
-
-    # Add-ons
     add_on_keys: List[str] = field(default_factory=list)
     add_ons_total: float = 0.0
-
-    # Totals and discounts
     subtotal: float = 0.0
     discount_applied: float = 0.0
     final_total: float = 0.0
     amount_currency: str = "$0.00"
-
-    # Additional information
     additional_info: Optional[str] = None
     additional_info_lead_in: Optional[str] = None
     additional_info_bullets: List[str] = field(default_factory=list)
-
-    # Attendance
     attendance_expected: Optional[int] = None
     audience_list: str = "physicians, nurses, pharmacists, advanced practitioners and patient advocates"
-
-    # LOA-specific fields
     agreement_date: Optional[str] = None
     signature_person: str = "Sarah Louden - Founder and Executive Director, Total Health Conferencing"
-
-    # Document metadata
     document_type: str = "LOR"  # "LOR" or "LOA"
     event_year: int = 2025
 
