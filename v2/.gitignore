@@ -1,0 +1,97 @@
+# ============================================================================
+# LOR/LOA Generator - Git Ignore File
+# CRITICAL: This file protects sensitive business data from being committed
+# ============================================================================
+
+# -------------------------
+# SECRETS & SENSITIVE DATA
+# -------------------------
+secrets.toml
+.streamlit/secrets.toml
+*.env
+.env
+.env.*
+credentials.json
+config/secrets.py
+
+# -------------------------
+# LOGS & USER DATA
+# -------------------------
+letter_generation_log.json
+*.log
+logs/
+audit_trail/
+
+# -------------------------
+# PYTHON
+# -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# -------------------------
+# VIRTUAL ENVIRONMENTS
+# -------------------------
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# -------------------------
+# IDE / EDITOR
+# -------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# -------------------------
+# TESTING
+# -------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# -------------------------
+# TEMP FILES
+# -------------------------
+*.tmp
+tmp/
+temp/
+.cache/
+
+# -------------------------
+# GENERATED DOCUMENTS (optional - uncomment if you don't want to track test outputs)
+# -------------------------
+# generated_letters/
+# test_outputs/
+
+# -------------------------
+# OS
+# -------------------------
+.DS_Store
+Thumbs.db

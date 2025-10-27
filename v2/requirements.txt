@@ -1,0 +1,24 @@
+# ============================================================================
+# LOR/LOA Generator - Requirements
+# Production-ready dependencies with security patches
+# ============================================================================
+
+# Core Framework
+streamlit==1.50.0
+
+# Document Generation
+python-docx==1.2.0
+reportlab==4.4.4
+pillow==11.3.0
+
+# Data Processing
+pandas==2.3.2
+numpy==2.3.3
+openpyxl==3.1.5
+
+# Utilities
+requests==2.32.5
+
+# Testing (development only)
+pytest==8.3.4
+pytest-cov==6.0.0

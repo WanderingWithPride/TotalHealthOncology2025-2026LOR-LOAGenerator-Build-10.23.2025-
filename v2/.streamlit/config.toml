@@ -1,0 +1,19 @@
+# ============================================================================
+# Total Health Conferencing - Streamlit Configuration
+# Brand colors and application settings
+# ============================================================================
+
+[theme]
+primaryColor = "#013955"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8F9FA"
+textColor = "#013955"
+font = "sans serif"
+
+[server]
+enableCORS = true
+enableXsrfProtection = false
+headless = true
+
+[browser]
+gatherUsageStats = false
